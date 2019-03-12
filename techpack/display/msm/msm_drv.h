@@ -38,6 +38,7 @@
 #include <linux/sde_vm_event.h>
 #include <linux/sizes.h>
 #include <linux/kthread.h>
+#include <linux/notifier.h>
 
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
@@ -1041,6 +1042,7 @@ struct msm_drm_private {
 
 	struct mutex vm_client_lock;
 	struct list_head vm_client_list;
+	struct notifier_block msm_drv_notifier;
 };
 
 /* get struct msm_kms * from drm_device * */
