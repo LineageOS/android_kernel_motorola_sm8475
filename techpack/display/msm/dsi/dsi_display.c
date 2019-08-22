@@ -4309,6 +4309,9 @@ static int dsi_display_res_init(struct dsi_display *display)
 		phy->cfg.split_link.lanes_per_sublink = host->split_link.lanes_per_sublink;
 	}
 
+	dsi_panel_parse_panel_cfg(display->panel,
+				!strcmp(display->display_type, "primary"));
+
 	rc = dsi_display_parse_lane_map(display);
 	if (rc) {
 		DSI_ERR("Lane map not found, rc=%d\n", rc);
@@ -6781,6 +6784,11 @@ int dsi_display_get_info(struct drm_connector *connector,
 	info->has_qsync_min_fps_list = (display->panel->qsync_caps.qsync_min_fps_list_len > 0);
 	info->has_avr_step_req = (display->panel->avr_caps.avr_step_fps_list_len > 0);
 	info->poms_align_vsync = display->panel->poms_align_vsync;
+
+	info->panel_id = display->panel->panel_id;
+	info->panel_ver = display->panel->panel_ver;
+	strncpy(info->panel_name, display->panel->panel_name,
+				sizeof(display->panel->panel_name));
 
 	switch (display->panel->panel_mode) {
 	case DSI_OP_VIDEO_MODE:
