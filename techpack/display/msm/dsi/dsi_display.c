@@ -3475,7 +3475,8 @@ int dsi_host_transfer_sub(struct mipi_dsi_host *host, struct dsi_cmd_desc *cmd)
 		}
 
 		rc = dsi_ctrl_cmd_transfer(display->ctrl[idx].ctrl, cmd);
-		if (rc < 0)
+		if (((cmd->ctrl_flags & DSI_CTRL_CMD_READ) && rc <= 0) ||
+				(!(cmd->ctrl_flags & DSI_CTRL_CMD_READ) && rc))
 			DSI_ERR("[%s] cmd transfer failed, rc=%d\n", display->name, rc);
 
 		dsi_ctrl_transfer_unprepare(display->ctrl[idx].ctrl, cmd->ctrl_flags);
