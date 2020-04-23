@@ -295,6 +295,7 @@ struct dsi_panel {
 	u64 panel_ver;
 	u32 panel_regDA;
 	char panel_name[DSI_PANEL_MAX_PANEL_LEN];
+	char panel_supplier[DSI_PANEL_MAX_PANEL_LEN];
 };
 
 static inline bool dsi_panel_ulps_feature_enabled(struct dsi_panel *panel)
