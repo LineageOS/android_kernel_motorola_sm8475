@@ -348,8 +348,11 @@ static int cam_ois_component_bind(struct device *dev,
 	soc_private->power_info.dev  = &pdev->dev;
 
 	INIT_LIST_HEAD(&(o_ctrl->i2c_init_data.list_head));
+	INIT_LIST_HEAD(&(o_ctrl->i2c_preprog_data.list_head));
+	INIT_LIST_HEAD(&(o_ctrl->i2c_precoeff_data.list_head));
 	INIT_LIST_HEAD(&(o_ctrl->i2c_calib_data.list_head));
 	INIT_LIST_HEAD(&(o_ctrl->i2c_fwinit_data.list_head));
+	INIT_LIST_HEAD(&(o_ctrl->i2c_postcalib_data.list_head));
 	INIT_LIST_HEAD(&(o_ctrl->i2c_mode_data.list_head));
 	INIT_LIST_HEAD(&(o_ctrl->i2c_time_data.list_head));
 	mutex_init(&(o_ctrl->ois_mutex));
