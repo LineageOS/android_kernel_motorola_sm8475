@@ -1234,7 +1234,7 @@ static const struct of_device_id ps5169_match_table[] = {
 };
 
 static const struct i2c_device_id ps5169_i2c_id[] = {
-	{ "ps5169 redriver", 0 },
+	{ "ps5169-redriver", 0 },
 	{ },
 };
 MODULE_DEVICE_TABLE(i2c, ps5169_i2c_id);
