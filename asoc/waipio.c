@@ -17,6 +17,8 @@
 #include <linux/soc/qcom/fsa4480-i2c.h>
 #include <linux/pm_qos.h>
 #include <linux/nvmem-consumer.h>
+#include <linux/regulator/consumer.h>
+#include <linux/pm_runtime.h>
 #include <sound/control.h>
 #include <sound/core.h>
 #include <sound/soc.h>
@@ -31,6 +33,7 @@
 #include "device_event.h"
 #include "asoc/msm-cdc-pinctrl.h"
 #include "asoc/wcd-mbhc-v2.h"
+#include <asoc/msm-cdc-supply.h>
 #include "codecs/wcd938x/wcd938x-mbhc.h"
 #include "codecs/wcd937x/wcd937x-mbhc.h"
 #include "codecs/wsa883x/wsa883x.h"
@@ -71,6 +74,11 @@ struct msm_asoc_mach_data {
 	struct device_node *dmic23_gpio_p; /* used by pinctrl API */
 	struct device_node *dmic45_gpio_p; /* used by pinctrl API */
 	struct device_node *dmic67_gpio_p; /* used by pinctrl API */
+	struct device_node *dmic23_en_gpio_p;
+	struct device_node *dmic45_en_gpio_p;
+	struct cdc_regulator *regulator;
+	int num_supplies;
+	struct regulator_bulk_data *supplies;
 	struct pinctrl *usbc_en2_gpio_p; /* used by pinctrl API */
 	bool is_afe_config_done;
 	struct device_node *fsa_handle;
@@ -292,7 +300,7 @@ static int msm_dmic_event(struct snd_soc_dapm_widget *w,
 	int ret = 0;
 	u32 dmic_idx;
 	int *dmic_gpio_cnt;
-	struct device_node *dmic_gpio;
+	struct device_node *dmic_gpio, *dmic_en;
 	char  *wname;
 
 	wname = strpbrk(w->name, "012345");
@@ -320,11 +328,15 @@ static int msm_dmic_event(struct snd_soc_dapm_widget *w,
 	case 3:
 		dmic_gpio_cnt = &dmic_2_3_gpio_cnt;
 		dmic_gpio = pdata->dmic23_gpio_p;
+		if(pdata->dmic23_en_gpio_p)
+			dmic_en = pdata->dmic23_en_gpio_p;
 		break;
 	case 4:
 	case 5:
 		dmic_gpio_cnt = &dmic_4_5_gpio_cnt;
 		dmic_gpio = pdata->dmic45_gpio_p;
+		if(pdata->dmic45_en_gpio_p)
+			dmic_en = pdata->dmic45_en_gpio_p;
 		break;
 	case 6:
 	case 7:
@@ -337,13 +349,22 @@ static int msm_dmic_event(struct snd_soc_dapm_widget *w,
 		return -EINVAL;
 	}
 
-	dev_dbg(component->dev, "%s: event %d DMIC%d dmic_gpio_cnt %d\n",
+	dev_info(component->dev, "%s: event %d DMIC%d dmic_gpio_cnt %d\n",
 			__func__, event, dmic_idx, *dmic_gpio_cnt);
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
 		(*dmic_gpio_cnt)++;
 		if (*dmic_gpio_cnt == 1) {
+			if (dmic_en) {
+				ret = msm_cdc_pinctrl_select_active_state(
+						dmic_en);
+				if (ret < 0) {
+					pr_err("%s: gpio set cannot be activated %sd",
+						__func__, "dmic_en");
+					return ret;
+				}
+			}
 			ret = msm_cdc_pinctrl_select_active_state(
 						dmic_gpio);
 			if (ret < 0) {
@@ -357,6 +378,15 @@ static int msm_dmic_event(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_POST_PMD:
 		(*dmic_gpio_cnt)--;
 		if (*dmic_gpio_cnt == 0) {
+			if (dmic_en) {
+				ret = msm_cdc_pinctrl_select_sleep_state(
+					dmic_en);
+				if (ret < 0) {
+					pr_err("%s: gpio set cannot be de-activated %sd",
+						__func__, "dmic_en");
+					return ret;
+				}
+			}
 			ret = msm_cdc_pinctrl_select_sleep_state(
 					dmic_gpio);
 			if (ret < 0) {
@@ -1302,6 +1332,7 @@ static int msm_snd_card_late_probe(struct snd_soc_card *card)
 {
 	struct snd_soc_component *component = NULL;
 	struct snd_soc_pcm_runtime *rtd;
+	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
 	int ret = 0;
 	void *mbhc_calibration;
 	bool is_wcd937x = false;
@@ -1313,7 +1344,8 @@ static int msm_snd_card_late_probe(struct snd_soc_card *card)
 			__func__, card->dai_link[0]);
 		return -EINVAL;
 	}
-
+	if (pdata->wcd_disabled)
+		return 0;
 	component = snd_soc_rtdcom_lookup(rtd, WCD938X_DRV_NAME);
 	if (!component) {
 		component = snd_soc_rtdcom_lookup(rtd, WCD937X_DRV_NAME);
@@ -1873,6 +1905,36 @@ parse:
 	return ret;
 }
 
+static int dmic_enable_supplies(struct platform_device *pdev)
+{
+	int ret = 0;
+	struct snd_soc_card *card = platform_get_drvdata(pdev);
+	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+
+	/* Parse power supplies */
+	msm_cdc_get_power_supplies(&pdev->dev, &pdata->regulator,
+				   &pdata->num_supplies);
+	if (!pdata->regulator || (pdata->num_supplies <= 0)) {
+		pr_err("%s: no power supplies defined\n", __func__);
+		return -EINVAL;
+	}
+
+	ret = msm_cdc_init_supplies(&pdev->dev, &pdata->supplies,
+				    pdata->regulator, pdata->num_supplies);
+	if (!pdata->supplies) {
+		pr_err("%s: Cannot init dmic supplies\n", __func__);
+		return ret;
+	}
+
+	ret = msm_cdc_enable_static_supplies(&pdev->dev, pdata->supplies,
+					     pdata->regulator,
+					     pdata->num_supplies);
+	if (ret)
+		pr_err("%s: dmic static supply enable failed!\n", __func__);
+
+	return ret;
+}
+
 static int msm_asoc_machine_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = NULL;
@@ -1971,6 +2033,17 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 	pdata->dmic67_gpio_p = of_parse_phandle(pdev->dev.of_node,
 					      "qcom,cdc-dmic67-gpios",
 					       0);
+	pdata->dmic23_en_gpio_p = of_parse_phandle(pdev->dev.of_node,
+					     "qcom,dmic23-en-gpio", 0);
+	pdata->dmic45_en_gpio_p = of_parse_phandle(pdev->dev.of_node,
+					     "qcom,dmic45-en-gpio", 0);
+	if (pdata->dmic23_en_gpio_p || pdata->dmic45_en_gpio_p) {
+		ret = dmic_enable_supplies(pdev);
+		if (ret) {
+			ret = -EPROBE_DEFER;
+			dev_err(&pdev->dev, "%s: dmic supplies failed\n", __func__);
+		}
+	}
 	if (pdata->dmic01_gpio_p)
 		msm_cdc_pinctrl_set_wakeup_capable(pdata->dmic01_gpio_p, false);
 	if (pdata->dmic23_gpio_p)
@@ -1979,6 +2052,10 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 		msm_cdc_pinctrl_set_wakeup_capable(pdata->dmic45_gpio_p, false);
 	if (pdata->dmic67_gpio_p)
 		msm_cdc_pinctrl_set_wakeup_capable(pdata->dmic67_gpio_p, false);
+	if(pdata->dmic23_en_gpio_p)
+		msm_cdc_pinctrl_set_wakeup_capable(pdata->dmic23_en_gpio_p, false);
+	if (pdata->dmic45_en_gpio_p)
+		msm_cdc_pinctrl_set_wakeup_capable(pdata->dmic45_en_gpio_p, false);
 
 	msm_common_snd_init(pdev, card);
 
