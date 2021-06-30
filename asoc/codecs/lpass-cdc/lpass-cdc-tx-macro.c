@@ -611,11 +611,15 @@ static int lpass_cdc_tx_macro_tx_mixer_put(struct snd_kcontrol *kcontrol,
 		return -EINVAL;
 
 	if (enable) {
-		set_bit(dec_id, &tx_priv->active_ch_mask[dai_id]);
-		tx_priv->active_ch_cnt[dai_id]++;
+		if (!(test_bit(dec_id, &tx_priv->active_ch_mask[dai_id]))) {
+			set_bit(dec_id, &tx_priv->active_ch_mask[dai_id]);
+			tx_priv->active_ch_cnt[dai_id]++;
+		}
 	} else {
-		tx_priv->active_ch_cnt[dai_id]--;
-		clear_bit(dec_id, &tx_priv->active_ch_mask[dai_id]);
+		if (test_bit(dec_id, &tx_priv->active_ch_mask[dai_id])) {
+			tx_priv->active_ch_cnt[dai_id]--;
+			clear_bit(dec_id, &tx_priv->active_ch_mask[dai_id]);
+		}
 	}
 	snd_soc_dapm_mixer_update_power(widget->dapm, kcontrol, enable, update);
 
