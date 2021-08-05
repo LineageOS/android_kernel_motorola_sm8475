@@ -76,6 +76,7 @@ struct msm_asoc_mach_data {
 	struct device_node *dmic67_gpio_p; /* used by pinctrl API */
 	struct device_node *dmic23_en_gpio_p;
 	struct device_node *dmic45_en_gpio_p;
+	struct device_node *dmic_supply;
 	struct cdc_regulator *regulator;
 	int num_supplies;
 	struct regulator_bulk_data *supplies;
@@ -2037,13 +2038,17 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 					     "qcom,dmic23-en-gpio", 0);
 	pdata->dmic45_en_gpio_p = of_parse_phandle(pdev->dev.of_node,
 					     "qcom,dmic45-en-gpio", 0);
-	if (pdata->dmic23_en_gpio_p || pdata->dmic45_en_gpio_p) {
+	pdata->dmic_supply = of_parse_phandle(pdev->dev.of_node,
+					     "cdc-vdd-dmic1-supply", 0);
+
+	if(pdata->dmic_supply) {
 		ret = dmic_enable_supplies(pdev);
 		if (ret) {
 			ret = -EPROBE_DEFER;
 			dev_err(&pdev->dev, "%s: dmic supplies failed\n", __func__);
 		}
 	}
+
 	if (pdata->dmic01_gpio_p)
 		msm_cdc_pinctrl_set_wakeup_capable(pdata->dmic01_gpio_p, false);
 	if (pdata->dmic23_gpio_p)
