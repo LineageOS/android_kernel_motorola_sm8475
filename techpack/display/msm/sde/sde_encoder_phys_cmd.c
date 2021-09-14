@@ -293,12 +293,6 @@ static void sde_encoder_phys_cmd_te_rd_ptr_irq(void *arg, int irq_idx)
 	spin_unlock_irqrestore(phys_enc->enc_spinlock, lock_flags);
 
 	sde_encoder_helper_get_pp_line_count(phys_enc->parent, info);
-	SDE_EVT32_IRQ(DRMID(phys_enc->parent),
-		info[0].pp_idx, info[0].intf_idx,
-		info[0].wr_ptr_line_count, info[0].intf_frame_count, info[0].rd_ptr_line_count,
-		info[1].pp_idx, info[1].intf_idx,
-		info[1].wr_ptr_line_count, info[1].intf_frame_count, info[1].rd_ptr_line_count,
-		scheduler_status);
 
 	if (phys_enc->parent_ops.handle_vblank_virt)
 		phys_enc->parent_ops.handle_vblank_virt(phys_enc->parent,
@@ -680,10 +674,6 @@ static bool _sde_encoder_phys_cmd_is_ongoing_pptx(
 
 		hw_pp->ops.get_vsync_info(hw_pp, &info);
 	}
-
-	SDE_EVT32(DRMID(phys_enc->parent), phys_enc->hw_pp->idx - PINGPONG_0,
-		phys_enc->hw_intf->idx - INTF_0, atomic_read(&phys_enc->pending_kickoff_cnt),
-		info.wr_ptr_line_count, info.intf_frame_count, phys_enc->cached_mode.vdisplay);
 
 	if (info.wr_ptr_line_count > 0 && info.wr_ptr_line_count <
 			phys_enc->cached_mode.vdisplay)
