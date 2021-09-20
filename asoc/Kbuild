@@ -166,7 +166,11 @@ endif
 
 # for WAIPIO sound card driver
 ifdef CONFIG_SND_SOC_WAIPIO
+ifneq (,$(filter ironmn%, $(TARGET_PRODUCT)))
+	MACHINE_OBJS += waipio-ironmn.o
+else
 	MACHINE_OBJS += waipio.o
+endif
 endif
 
 # for HOLI sound card driver
