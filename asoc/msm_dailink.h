@@ -360,3 +360,31 @@ SND_SOC_DAILINK_DEFS(tavil_i2s_tx1,
 	DAILINK_COMP_ARRAY(COMP_CODEC("tavil_codec", "tavil_i2s_tx1")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
 
+SND_SOC_DAILINK_DEFS(pri_mi2s_rx_franklin,
+        DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
+        DAILINK_COMP_ARRAY(COMP_CODEC("cirrus-spk-1", "cs35l45"),
+                           COMP_CODEC("cirrus-spk-2", "cs35l45"),
+                           COMP_CODEC("cirrus-spk-3", "cs35l45")),
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+
+SND_SOC_DAILINK_DEFS(pri_mi2s_tx_franklin,
+        DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
+        DAILINK_COMP_ARRAY(COMP_CODEC("cirrus-spk-1", "cs35l45"),
+                           COMP_CODEC("cirrus-spk-2", "cs35l45"),
+                           COMP_CODEC("cirrus-spk-3", "cs35l45")),
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+
+
+SND_SOC_DAILINK_DEFS(pri_tdm_rx_franklin,
+        DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
+        DAILINK_COMP_ARRAY(COMP_CODEC("cirrus-spk-1", "cs35l45"),
+                           COMP_CODEC("cirrus-spk-2", "cs35l45"),
+                           COMP_CODEC("cirrus-spk-3", "cs35l45")),
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+
+SND_SOC_DAILINK_DEFS(pri_tdm_tx_franklin,
+        DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
+        DAILINK_COMP_ARRAY(COMP_CODEC("cirrus-spk-1", "cs35l45"),
+                           COMP_CODEC("cirrus-spk-2", "cs35l45"),
+                           COMP_CODEC("cirrus-spk-3", "cs35l45")),
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));

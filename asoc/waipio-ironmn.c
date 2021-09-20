@@ -737,7 +737,7 @@ static struct snd_soc_dai_link msm_va_cdc_dma_be_dai_links[] = {
  * ------------------------------------
  */
 static struct snd_soc_dai_link msm_mi2s_dai_links[] = {
-	{
+/*	{
 		.name = LPASS_BE_PRI_MI2S_RX,
 		.stream_name = LPASS_BE_PRI_MI2S_RX,
 		.playback_only = 1,
@@ -758,7 +758,7 @@ static struct snd_soc_dai_link msm_mi2s_dai_links[] = {
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(pri_mi2s_tx),
 	},
-	{
+*/	{
 		.name = LPASS_BE_SEC_MI2S_RX,
 		.stream_name = LPASS_BE_SEC_MI2S_RX,
 		.playback_only = 1,
@@ -994,6 +994,56 @@ static struct snd_soc_dai_link msm_tdm_dai_links[] = {
 	},
 };
 
+static struct snd_soc_dai_link msm_mi2s_franklin_dai_links[] = {
+	{
+		.name = LPASS_BE_PRI_MI2S_RX,
+		.stream_name = LPASS_BE_PRI_MI2S_RX,
+		.playback_only = 1,
+                .no_pcm = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+			SND_SOC_DPCM_TRIGGER_POST},
+		.ops = &msm_common_be_ops,
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+                SND_SOC_DAILINK_REG(pri_mi2s_rx_franklin),
+	},
+	{
+		.name = LPASS_BE_PRI_MI2S_TX,
+		.stream_name = LPASS_BE_PRI_MI2S_TX,
+                .no_pcm = 1,
+		.capture_only = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+			SND_SOC_DPCM_TRIGGER_POST},
+		.ops = &msm_common_be_ops,
+		.ignore_suspend = 1,
+                SND_SOC_DAILINK_REG(pri_mi2s_tx_franklin),
+	},
+};
+
+static struct snd_soc_dai_link msm_tdm_franklin_dai_links[] = {
+	{
+		.name = LPASS_BE_PRI_TDM_RX_0,
+		.stream_name = LPASS_BE_PRI_TDM_RX_0,
+		.playback_only = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+			SND_SOC_DPCM_TRIGGER_POST},
+		.ops = &msm_common_be_ops,
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+                SND_SOC_DAILINK_REG(pri_tdm_rx_franklin),
+	},
+	{
+		.name = LPASS_BE_PRI_TDM_TX_0,
+		.stream_name = LPASS_BE_PRI_TDM_TX_0,
+		.capture_only = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+			SND_SOC_DPCM_TRIGGER_POST},
+		.ops = &msm_common_be_ops,
+		.ignore_suspend = 1,
+                SND_SOC_DAILINK_REG(pri_tdm_tx_franklin),
+	},
+};
+
 static struct snd_soc_dai_link msm_waipio_dai_links[
 			ARRAY_SIZE(msm_wsa_cdc_dma_be_dai_links) +
 			ARRAY_SIZE(msm_wsa2_cdc_dma_be_dai_links) +
@@ -1004,7 +1054,9 @@ static struct snd_soc_dai_link msm_waipio_dai_links[
 			ARRAY_SIZE(msm_common_be_dai_links) +
 			ARRAY_SIZE(msm_wcn_be_dai_links) +
 			ARRAY_SIZE(msm_mi2s_dai_links) +
-			ARRAY_SIZE(msm_tdm_dai_links)];
+			ARRAY_SIZE(msm_tdm_dai_links) +
+			ARRAY_SIZE(msm_mi2s_franklin_dai_links) +
+			ARRAY_SIZE(msm_tdm_franklin_dai_links)];
 
 
 static int msm_populate_dai_link_component_of_node(
@@ -1205,6 +1257,7 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev, int w
 	int rc = 0;
 	u32 val = 0;
 	const struct of_device_id *match;
+        int cirrus_franklin_max_devs = 0;
 
 	match = of_match_node(waipio_asoc_machine_of_match, dev->of_node);
 	if (!match) {
@@ -1297,8 +1350,27 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev, int w
 			       sizeof(msm_wcn_be_dai_links));
 			total_links += ARRAY_SIZE(msm_wcn_be_dai_links);
 		}
+		rc = of_property_read_u32(dev->of_node,
+			"cirrus,franklin-max-devs", &cirrus_franklin_max_devs);
+		if (rc)
+			cirrus_franklin_max_devs = 0;
+		dev_info(dev,"%s: franklin-max-devs %d\n",
+				__func__, cirrus_franklin_max_devs);
 
+                if (cirrus_franklin_max_devs == 3) {
+			memcpy(msm_waipio_dai_links + total_links,
+				msm_mi2s_franklin_dai_links,
+				sizeof(msm_mi2s_franklin_dai_links));
+			total_links += ARRAY_SIZE(msm_mi2s_franklin_dai_links);
+			memcpy(msm_waipio_dai_links + total_links,
+				msm_tdm_franklin_dai_links,
+				sizeof(msm_tdm_franklin_dai_links));
+			total_links += ARRAY_SIZE(msm_tdm_franklin_dai_links);
+
+		}
 		dailink = msm_waipio_dai_links;
+
+
 	} else if(!strcmp(match->data, "stub_codec")) {
 		card = &snd_soc_card_stub_msm;
 
@@ -1455,8 +1527,10 @@ static int msm_rx_tx_codec_init(struct snd_soc_pcm_runtime *rtd)
 	lpass_cdc_info_create_codec_entry(pdata->codec_root, lpass_cdc_component);
 	lpass_cdc_register_wake_irq(lpass_cdc_component, false);
 
-	if (pdata->wcd_disabled)
+	if (pdata->wcd_disabled) {
+                codec_reg_done = true;
 		goto done;
+}
 
 	component = snd_soc_rtdcom_lookup(rtd, WCD938X_DRV_NAME);
 	if (!component) {
@@ -1698,12 +1772,14 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 
 	ret = msm_populate_dai_link_component_of_node(card);
 	if (ret) {
+		dev_err(&pdev->dev, "%s: msm_populate_dai_link_component_of_node defer \n",__func__);
 		ret = -EPROBE_DEFER;
 		goto err;
 	}
 
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
 	if (ret == -EPROBE_DEFER) {
+		dev_err(&pdev->dev, "%s: snd_soc_register_card  defer \n",__func__);
 		if (codec_reg_done)
 			ret = -EINVAL;
 		goto err;
