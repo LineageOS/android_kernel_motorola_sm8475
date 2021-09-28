@@ -45,6 +45,9 @@ extern struct i2c_driver cam_sensor_i2c_driver;
 	IS_REACHABLE(CONFIG_LEDS_QTI_FLASH)
 extern struct platform_driver cam_flash_platform_driver;
 #endif
+#ifdef CONFIG_AF_NOISE_ELIMINATION
+extern struct platform_driver mot_actuator_platform_driver;
+#endif
 #endif
 #ifdef CONFIG_SPECTRA_ICP
 extern struct platform_driver cam_a5_driver;
@@ -108,6 +111,7 @@ static struct platform_driver *const cam_component_platform_drivers[] = {
 	&cci_driver,
 	&csiphy_driver,
 	&cam_actuator_platform_driver,
+
 	&cam_sensor_platform_driver,
 	&cam_eeprom_platform_driver,
 	&cam_ois_platform_driver,
@@ -116,6 +120,10 @@ static struct platform_driver *const cam_component_platform_drivers[] = {
 	IS_REACHABLE(CONFIG_LEDS_QTI_FLASH)
 	&cam_flash_platform_driver,
 #endif
+#ifdef CONFIG_AF_NOISE_ELIMINATION
+	&mot_actuator_platform_driver,
+#endif
+
 #endif
 #ifdef CONFIG_SPECTRA_ICP
 	&cam_a5_driver,
