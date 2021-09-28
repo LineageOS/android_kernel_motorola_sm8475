@@ -638,9 +638,9 @@ static int cam_flash_i2c_component_bind(struct device *dev,
 		rc = cam_sensor_util_init_gpio_pin_tbl(soc_info,
 			&fctrl->power_info.gpio_num_info);
 		if ((rc < 0) || (!fctrl->power_info.gpio_num_info)) {
-			CAM_ERR(CAM_FLASH, "No/Error Flash GPIOs");
-			rc = -EINVAL;
-			goto free_ctrl;
+			CAM_WARN(CAM_FLASH, "No/Error Flash GPIOs");
+			// rc = -EINVAL;
+			// goto free_ctrl;
 		}
 	}
 
