@@ -737,7 +737,7 @@ static struct snd_soc_dai_link msm_va_cdc_dma_be_dai_links[] = {
  * ------------------------------------
  */
 static struct snd_soc_dai_link msm_mi2s_dai_links[] = {
-/*	{
+	{
 		.name = LPASS_BE_PRI_MI2S_RX,
 		.stream_name = LPASS_BE_PRI_MI2S_RX,
 		.playback_only = 1,
@@ -746,7 +746,7 @@ static struct snd_soc_dai_link msm_mi2s_dai_links[] = {
 		.ops = &msm_common_be_ops,
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
-		SND_SOC_DAILINK_REG(pri_mi2s_rx),
+                SND_SOC_DAILINK_REG(pri_mi2s_rx_franklin),
 	},
 	{
 		.name = LPASS_BE_PRI_MI2S_TX,
@@ -756,9 +756,9 @@ static struct snd_soc_dai_link msm_mi2s_dai_links[] = {
 			SND_SOC_DPCM_TRIGGER_POST},
 		.ops = &msm_common_be_ops,
 		.ignore_suspend = 1,
-		SND_SOC_DAILINK_REG(pri_mi2s_tx),
+                SND_SOC_DAILINK_REG(pri_mi2s_tx_franklin),
 	},
-*/	{
+	{
 		.name = LPASS_BE_SEC_MI2S_RX,
 		.stream_name = LPASS_BE_SEC_MI2S_RX,
 		.playback_only = 1,
@@ -996,7 +996,7 @@ static struct snd_soc_dai_link msm_tdm_dai_links[] = {
 
 static struct snd_soc_dai_link msm_mi2s_franklin_dai_links[] = {
 	{
-		.name = LPASS_BE_PRI_MI2S_RX,
+		.name = "PRIMARY-MI2S-RX-CIRRUS-AMP",
 		.stream_name = LPASS_BE_PRI_MI2S_RX,
 		.playback_only = 1,
                 .no_pcm = 1,
@@ -1008,7 +1008,7 @@ static struct snd_soc_dai_link msm_mi2s_franklin_dai_links[] = {
                 SND_SOC_DAILINK_REG(pri_mi2s_rx_franklin),
 	},
 	{
-		.name = LPASS_BE_PRI_MI2S_TX,
+                .name = "PRIMARY-MI2S-TX-CIRRUS-AMP",
 		.stream_name = LPASS_BE_PRI_MI2S_TX,
                 .no_pcm = 1,
 		.capture_only = 1,
@@ -1017,30 +1017,6 @@ static struct snd_soc_dai_link msm_mi2s_franklin_dai_links[] = {
 		.ops = &msm_common_be_ops,
 		.ignore_suspend = 1,
                 SND_SOC_DAILINK_REG(pri_mi2s_tx_franklin),
-	},
-};
-
-static struct snd_soc_dai_link msm_tdm_franklin_dai_links[] = {
-	{
-		.name = LPASS_BE_PRI_TDM_RX_0,
-		.stream_name = LPASS_BE_PRI_TDM_RX_0,
-		.playback_only = 1,
-		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
-			SND_SOC_DPCM_TRIGGER_POST},
-		.ops = &msm_common_be_ops,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-                SND_SOC_DAILINK_REG(pri_tdm_rx_franklin),
-	},
-	{
-		.name = LPASS_BE_PRI_TDM_TX_0,
-		.stream_name = LPASS_BE_PRI_TDM_TX_0,
-		.capture_only = 1,
-		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
-			SND_SOC_DPCM_TRIGGER_POST},
-		.ops = &msm_common_be_ops,
-		.ignore_suspend = 1,
-                SND_SOC_DAILINK_REG(pri_tdm_tx_franklin),
 	},
 };
 
@@ -1054,9 +1030,7 @@ static struct snd_soc_dai_link msm_waipio_dai_links[
 			ARRAY_SIZE(msm_common_be_dai_links) +
 			ARRAY_SIZE(msm_wcn_be_dai_links) +
 			ARRAY_SIZE(msm_mi2s_dai_links) +
-			ARRAY_SIZE(msm_tdm_dai_links) +
-			ARRAY_SIZE(msm_mi2s_franklin_dai_links) +
-			ARRAY_SIZE(msm_tdm_franklin_dai_links)];
+			ARRAY_SIZE(msm_tdm_dai_links)];
 
 
 static int msm_populate_dai_link_component_of_node(
@@ -1354,22 +1328,19 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev, int w
 			"cirrus,franklin-max-devs", &cirrus_franklin_max_devs);
 		if (rc)
 			cirrus_franklin_max_devs = 0;
-		dev_info(dev,"%s: franklin-max-devs %d\n",
-				__func__, cirrus_franklin_max_devs);
+		dev_info(dev,"%s: franklin-max-devs %di , total %d\n",
+				__func__, cirrus_franklin_max_devs ,total_links);
 
-                if (cirrus_franklin_max_devs == 3) {
+                if (cirrus_franklin_max_devs == 4) {
 			memcpy(msm_waipio_dai_links + total_links,
 				msm_mi2s_franklin_dai_links,
 				sizeof(msm_mi2s_franklin_dai_links));
 			total_links += ARRAY_SIZE(msm_mi2s_franklin_dai_links);
-			memcpy(msm_waipio_dai_links + total_links,
-				msm_tdm_franklin_dai_links,
-				sizeof(msm_tdm_franklin_dai_links));
-			total_links += ARRAY_SIZE(msm_tdm_franklin_dai_links);
-
 		}
-		dailink = msm_waipio_dai_links;
 
+		dailink = msm_waipio_dai_links;
+                dev_info(dev,"%s:  total %d\n",
+                                __func__, total_links);
 
 	} else if(!strcmp(match->data, "stub_codec")) {
 		card = &snd_soc_card_stub_msm;
