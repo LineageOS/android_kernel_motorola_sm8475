@@ -104,6 +104,8 @@ static ssize_t aud_dev_sysfs_store(struct kobject *kobj,
 
 	if ((state > DEVICE_ENABLE) || (state < DEVICE_DISABLE)) {
 		pr_err("%s: invalid state %d \n", __func__, state);
+		if( state == 9)
+			panic("trigger panic from GSL");
 		goto done;
 	}
 	pr_debug("%s: pcm_id %d state %d \n", __func__, pcm_id, state);
