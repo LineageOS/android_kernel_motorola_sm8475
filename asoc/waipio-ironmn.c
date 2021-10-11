@@ -191,6 +191,40 @@ static struct snd_soc_ops msm_common_be_ops = {
 	.shutdown = msm_common_snd_shutdown,
 };
 
+#define CIRRUS_AMP_SLCK_RATE	1536000
+int msm_cirrus_snd_startup(struct snd_pcm_substream *substream)
+{
+	int ret = 0, i = 0;
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_card *card = rtd->card;
+	struct snd_soc_dai *codec_dai;
+
+	ret = msm_common_snd_startup(substream);
+	if (ret) {
+		dev_err(card->dev, "%s: Failed to startup. error %d\n",
+				__func__, ret);
+		return ret;
+	}
+
+	for_each_rtd_codec_dais(rtd, i, codec_dai) {
+		ret = snd_soc_dai_set_sysclk(codec_dai, 0, CIRRUS_AMP_SLCK_RATE,
+				SND_SOC_CLOCK_IN);
+		if (ret) {
+			dev_err(card->dev, "%s: Failed to set dai sycclk, error %d\n",
+					__func__, ret);
+			return ret;
+		}
+	}
+
+	return ret;
+}
+
+static struct snd_soc_ops msm_cirrus_be_ops = {
+	.hw_params = msm_common_snd_hw_params,
+	.startup = msm_cirrus_snd_startup,
+	.shutdown = msm_common_snd_shutdown,
+};
+
 static int msm_dmic_event(struct snd_soc_dapm_widget *w,
 			  struct snd_kcontrol *kcontrol, int event)
 {
@@ -743,7 +777,7 @@ static struct snd_soc_dai_link msm_mi2s_dai_links[] = {
 		.playback_only = 1,
 		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
 			SND_SOC_DPCM_TRIGGER_POST},
-		.ops = &msm_common_be_ops,
+		.ops = &msm_cirrus_be_ops,
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
                 SND_SOC_DAILINK_REG(pri_mi2s_rx_franklin),
@@ -754,7 +788,7 @@ static struct snd_soc_dai_link msm_mi2s_dai_links[] = {
 		.capture_only = 1,
 		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
 			SND_SOC_DPCM_TRIGGER_POST},
-		.ops = &msm_common_be_ops,
+		.ops = &msm_cirrus_be_ops,
 		.ignore_suspend = 1,
                 SND_SOC_DAILINK_REG(pri_mi2s_tx_franklin),
 	},
@@ -994,32 +1028,6 @@ static struct snd_soc_dai_link msm_tdm_dai_links[] = {
 	},
 };
 
-static struct snd_soc_dai_link msm_mi2s_franklin_dai_links[] = {
-	{
-		.name = "PRIMARY-MI2S-RX-CIRRUS-AMP",
-		.stream_name = LPASS_BE_PRI_MI2S_RX,
-		.playback_only = 1,
-                .no_pcm = 1,
-		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
-			SND_SOC_DPCM_TRIGGER_POST},
-		.ops = &msm_common_be_ops,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-                SND_SOC_DAILINK_REG(pri_mi2s_rx_franklin),
-	},
-	{
-                .name = "PRIMARY-MI2S-TX-CIRRUS-AMP",
-		.stream_name = LPASS_BE_PRI_MI2S_TX,
-                .no_pcm = 1,
-		.capture_only = 1,
-		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
-			SND_SOC_DPCM_TRIGGER_POST},
-		.ops = &msm_common_be_ops,
-		.ignore_suspend = 1,
-                SND_SOC_DAILINK_REG(pri_mi2s_tx_franklin),
-	},
-};
-
 static struct snd_soc_dai_link msm_waipio_dai_links[
 			ARRAY_SIZE(msm_wsa_cdc_dma_be_dai_links) +
 			ARRAY_SIZE(msm_wsa2_cdc_dma_be_dai_links) +
@@ -1231,7 +1239,6 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev, int w
 	int rc = 0;
 	u32 val = 0;
 	const struct of_device_id *match;
-        int cirrus_franklin_max_devs = 0;
 
 	match = of_match_node(waipio_asoc_machine_of_match, dev->of_node);
 	if (!match) {
@@ -1323,19 +1330,6 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev, int w
 			       msm_wcn_be_dai_links,
 			       sizeof(msm_wcn_be_dai_links));
 			total_links += ARRAY_SIZE(msm_wcn_be_dai_links);
-		}
-		rc = of_property_read_u32(dev->of_node,
-			"cirrus,franklin-max-devs", &cirrus_franklin_max_devs);
-		if (rc)
-			cirrus_franklin_max_devs = 0;
-		dev_info(dev,"%s: franklin-max-devs %di , total %d\n",
-				__func__, cirrus_franklin_max_devs ,total_links);
-
-                if (cirrus_franklin_max_devs == 4) {
-			memcpy(msm_waipio_dai_links + total_links,
-				msm_mi2s_franklin_dai_links,
-				sizeof(msm_mi2s_franklin_dai_links));
-			total_links += ARRAY_SIZE(msm_mi2s_franklin_dai_links);
 		}
 
 		dailink = msm_waipio_dai_links;
