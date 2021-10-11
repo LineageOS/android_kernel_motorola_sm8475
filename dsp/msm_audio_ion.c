@@ -278,7 +278,7 @@ static int msm_audio_ion_get_phys(struct dma_buf *dma_buf,
 		*addr |= ion_data->smmu_sid_bits;
 	}
 
-	pr_debug("phys=%pK, len=%zd, rc=%d\n", &(*addr), *len, rc);
+	pr_info("phys=%pK, len=%zd, rc=%d\n", &(*addr), *len, rc);
 err:
 	return rc;
 }
@@ -362,7 +362,7 @@ void msm_audio_fd_list_debug(void)
 
 	list_for_each_entry(msm_audio_fd_data,
 			&msm_audio_ion_fd_list.fd_list, list) {
-		pr_debug("%s fd %d handle %pK phy. addr %pK\n", __func__,
+		pr_info("%s fd %d handle %pK phy. addr %pK\n", __func__,
 			msm_audio_fd_data->fd, msm_audio_fd_data->handle,
 			(void *)msm_audio_fd_data->paddr);
 	}
@@ -397,7 +397,7 @@ void msm_audio_delete_fd_entry(void *handle)
 		msm_audio_fd_data = list_entry(ptr, struct msm_audio_fd_data,
 					list);
 		if (msm_audio_fd_data->handle == handle) {
-			pr_debug("%s deleting handle %pK entry from list\n",
+			pr_info("%s deleting handle %pK entry from list\n",
 				__func__, handle);
 			list_del(&(msm_audio_fd_data->list));
 			kfree(msm_audio_fd_data);
@@ -416,7 +416,7 @@ int msm_audio_get_phy_addr(int fd, dma_addr_t *paddr, size_t *pa_len)
 		pr_err("%s Invalid paddr param status %d\n", __func__, status);
 		return status;
 	}
-	pr_debug("%s, fd %d\n", __func__, fd);
+	pr_info("%s, fd %d\n", __func__, fd);
 	mutex_lock(&(msm_audio_ion_fd_list.list_mutex));
 	list_for_each_entry(msm_audio_fd_data,
 			&msm_audio_ion_fd_list.fd_list, list) {
@@ -424,7 +424,7 @@ int msm_audio_get_phy_addr(int fd, dma_addr_t *paddr, size_t *pa_len)
 			*paddr = msm_audio_fd_data->paddr;
 			*pa_len = msm_audio_fd_data->plen;
 			status = 0;
-			pr_debug("%s Found fd %d paddr %pK\n",
+			pr_info("%s Found fd %d paddr %pK\n",
 				__func__, fd, paddr);
 			mutex_unlock(&(msm_audio_ion_fd_list.list_mutex));
 			return status;
@@ -460,13 +460,13 @@ void msm_audio_get_handle(int fd, void **handle)
 {
 	struct msm_audio_fd_data *msm_audio_fd_data = NULL;
 
-	pr_debug("%s fd %d\n", __func__, fd);
+	pr_info("%s fd %d\n", __func__, fd);
 	mutex_lock(&(msm_audio_ion_fd_list.list_mutex));
 	list_for_each_entry(msm_audio_fd_data,
 			&msm_audio_ion_fd_list.fd_list, list) {
 		if (msm_audio_fd_data->fd == fd) {
 			*handle = (struct dma_buf *)msm_audio_fd_data->handle;
-			pr_debug("%s handle %pK\n", __func__, *handle);
+			pr_info("%s handle %pK\n", __func__, *handle);
 			break;
 		}
 	}
@@ -495,7 +495,7 @@ static int msm_audio_ion_import(struct dma_buf **dma_buf, int fd,
 	int rc = 0;
 
 	if (!(ion_data->device_status & MSM_AUDIO_ION_PROBED)) {
-		pr_debug("%s: probe is not done, deferred\n", __func__);
+		pr_info("%s: probe is not done, deferred\n", __func__);
 		return -EPROBE_DEFER;
 	}
 
@@ -506,7 +506,7 @@ static int msm_audio_ion_import(struct dma_buf **dma_buf, int fd,
 
 	/* bufsz should be 0 and fd shouldn't be 0 as of now */
 	*dma_buf = dma_buf_get(fd);
-	pr_debug("%s: dma_buf =%pK, fd=%d\n", __func__, *dma_buf, fd);
+	pr_info("%s: dma_buf =%pK, fd=%d\n", __func__, *dma_buf, fd);
 	if (IS_ERR_OR_NULL((void *)(*dma_buf))) {
 		pr_err("%s: dma_buf_get failed\n", __func__);
 		rc = -EINVAL;
@@ -527,7 +527,7 @@ static int msm_audio_ion_import(struct dma_buf **dma_buf, int fd,
 			pr_err("%s: failed to map ION buf, rc = %d\n", __func__, rc);
 			goto err;
 		}
-		pr_debug("%s: mapped address = %pK, size=%zd\n", __func__,
+		pr_info("%s: mapped address = %pK, size=%zd\n", __func__,
 				*vaddr, bufsz);
 	} else {
 		msm_audio_dma_buf_map(*dma_buf, paddr, plen, true, ion_data);
@@ -602,7 +602,7 @@ void msm_audio_ion_crash_handler(void)
 	void *handle = NULL;
 	struct msm_audio_ion_private *ion_data = NULL;
 
-	pr_debug("Inside %s\n", __func__);
+	pr_info("Inside %s\n", __func__);
 	if(!msm_audio_ion_fd_list_init) {
 		pr_err("%s: list not initialized yet, hence returning .... ", __func__);
 		return;
@@ -643,7 +643,7 @@ static int msm_audio_ion_open(struct inode *inode, struct file *file)
 						cdev);
 	struct device *dev = ion_data->chardev;
 
-	pr_debug("Inside %s\n", __func__);
+	pr_info("Inside %s\n", __func__);
 	get_device(dev);
 	return ret;
 }
@@ -655,7 +655,7 @@ static int msm_audio_ion_release(struct inode *inode, struct file *file)
 						cdev);
 	struct device *dev = ion_data->chardev;
 
-	pr_debug("Inside %s\n", __func__);
+	pr_info("Inside %s\n", __func__);
 	put_device(dev);
 	return 0;
 }
@@ -678,7 +678,7 @@ static long msm_audio_ion_ioctl(struct file *file, unsigned int ioctl_num,
 	struct msm_audio_ion_private *ion_data =
 			container_of(file->f_inode->i_cdev, struct msm_audio_ion_private, cdev);
 
-	pr_debug("%s ioctl num %u\n", __func__, ioctl_num);
+	pr_info("%s ioctl num %u\n", __func__, ioctl_num);
 	switch (ioctl_num) {
 	case IOCTL_MAP_PHYS_ADDR:
 		msm_audio_fd_data = kzalloc((sizeof(struct msm_audio_fd_data)),
@@ -774,7 +774,7 @@ static int msm_audio_ion_reg_chrdev(struct msm_audio_ion_private *ion_data)
 			__func__, ret);
 		return ret;
 	}
-	pr_debug("%s major number %d", __func__, MAJOR(ion_data->ion_major));
+	pr_info("%s major number %d", __func__, MAJOR(ion_data->ion_major));
 	ion_data->ion_class = class_create(THIS_MODULE,
 					ion_data->driver_name);
 	if (IS_ERR(ion_data->ion_class)) {
@@ -856,7 +856,7 @@ static int msm_audio_ion_probe(struct platform_device *pdev)
 	msm_audio_ion_data->smmu_enabled = smmu_enabled;
 
 	if (!smmu_enabled)
-		dev_dbg(dev, "%s: SMMU is Disabled\n", __func__);
+		dev_info(dev, "%s: SMMU is Disabled\n", __func__);
 
 #ifndef CONFIG_SPF_CORE
 	q6_state = apr_get_q6_state();
@@ -867,7 +867,7 @@ static int msm_audio_ion_probe(struct platform_device *pdev)
 		return -EPROBE_DEFER;
 	}
 #endif
-	dev_dbg(dev, "%s: adsp is ready\n", __func__);
+	dev_info(dev, "%s: adsp is ready\n", __func__);
 	if (smmu_enabled) {
 		msm_audio_ion_data->driver_name = "msm_audio_ion";
 		rc = of_property_read_u32(dev->of_node,
@@ -879,7 +879,7 @@ static int msm_audio_ion_probe(struct platform_device *pdev)
 				__func__);
 		return rc;
 		}
-		dev_dbg(dev, "%s: SMMU is Enabled. SMMU version is (%d)",
+		dev_info(dev, "%s: SMMU is Enabled. SMMU version is (%d)",
 			__func__, msm_audio_ion_data->smmu_version);
 		/* Get SMMU SID information from Devicetree */
 		rc = of_property_read_u64(dev->of_node,
@@ -948,7 +948,7 @@ static struct platform_driver msm_audio_ion_driver = {
 
 int __init msm_audio_ion_init(void)
 {
-	pr_debug("%s: msm_audio_ion_init called \n",__func__);
+	pr_info("%s: msm_audio_ion_init called \n",__func__);
 	return platform_driver_register(&msm_audio_ion_driver);
 }
 
