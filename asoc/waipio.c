@@ -1647,9 +1647,10 @@ static int msm_rx_tx_codec_init(struct snd_soc_pcm_runtime *rtd)
 	lpass_cdc_info_create_codec_entry(pdata->codec_root, lpass_cdc_component);
 	lpass_cdc_register_wake_irq(lpass_cdc_component, false);
 
-	if (pdata->wcd_disabled)
+	if (pdata->wcd_disabled) {
+		lpass_cdc_set_port_map(lpass_cdc_component, ARRAY_SIZE(sm_port_map), sm_port_map);
 		goto done;
-
+	}
 	component = snd_soc_rtdcom_lookup(rtd, WCD938X_DRV_NAME);
 	if (!component) {
 		component = snd_soc_rtdcom_lookup(rtd, WCD937X_DRV_NAME);
