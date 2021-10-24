@@ -1764,6 +1764,7 @@ static int wsa883x_swr_probe(struct swr_device *pdev)
 			__func__, ret);
 		goto dev_err;
 	}
+	wsa883x->swr_slave->slave_irq = wsa883x->virq;
 
 	wsa883x->swr_slave->slave_irq = wsa883x->virq;
 
