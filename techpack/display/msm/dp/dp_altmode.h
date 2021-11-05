@@ -15,7 +15,7 @@ struct dp_altmode {
 	struct dp_hpd base;
 };
 
-struct dp_hpd *dp_altmode_get(struct device *dev, struct dp_hpd_cb *cb);
+struct dp_hpd *dp_altmode_get(struct device *dev, struct dp_hpd_cb *cb, bool typec_bridge);
 
 void dp_altmode_put(struct dp_hpd *pd);
 #endif /* _DP_ALTMODE_H_ */

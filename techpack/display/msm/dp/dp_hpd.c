@@ -70,7 +70,7 @@ struct dp_hpd *dp_hpd_get(struct device *dev, struct dp_parser *parser,
 		}
 		dp_hpd->type = DP_HPD_GPIO;
 	} else {
-		dp_hpd = dp_altmode_get(dev, cb);
+		dp_hpd = dp_altmode_get(dev, cb, parser->typec_bridge);
 		if (!IS_ERR_OR_NULL(dp_hpd)) {
 			dp_hpd->type = DP_HPD_ALTMODE;
 			goto config;

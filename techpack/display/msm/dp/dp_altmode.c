@@ -16,7 +16,6 @@
 #include "dp_debug.h"
 #include "sde_dbg.h"
 
-
 #define ALTMODE_CONFIGURE_MASK (0x3f)
 #define ALTMODE_HPD_STATE_MASK (0x40)
 #define ALTMODE_HPD_IRQ_MASK (0x80)
@@ -28,8 +27,11 @@ struct dp_altmode_private {
 	struct dp_altmode dp_altmode;
 	struct altmode_client *amclient;
 	bool connected;
+	bool typec_bridge;
 	u32 lanes;
 };
+
+extern dp_altmode_typec_bridge_register(struct dp_altmode_private *altmode, int (*cb)(void *, void *, size_t));
 
 enum dp_altmode_pin_assignment {
 	DPAM_HPD_OUT,
@@ -204,7 +206,8 @@ static int dp_altmode_notify(void *priv, void *data, size_t len)
 	if (altmode->dp_cb && altmode->dp_cb->attention)
 		altmode->dp_cb->attention(altmode->dev);
 ack:
-	dp_altmode_send_pan_ack(altmode->amclient, port_index);
+	if (!altmode->typec_bridge)
+		dp_altmode_send_pan_ack(altmode->amclient, port_index);
 	return rc;
 }
 
@@ -269,7 +272,7 @@ static int dp_altmode_simulate_attention(struct dp_hpd *dp_hpd, int vdo)
 	return 0;
 }
 
-struct dp_hpd *dp_altmode_get(struct device *dev, struct dp_hpd_cb *cb)
+struct dp_hpd *dp_altmode_get(struct device *dev, struct dp_hpd_cb *cb, bool typec_bridge)
 {
 	int rc = 0;
 	struct dp_altmode_private *altmode;
@@ -292,10 +295,15 @@ struct dp_hpd *dp_altmode_get(struct device *dev, struct dp_hpd_cb *cb)
 	dp_altmode->base.simulate_connect = dp_altmode_simulate_connect;
 	dp_altmode->base.simulate_attention = dp_altmode_simulate_attention;
 
-	rc = altmode_register_notifier(dev, dp_altmode_register, altmode);
-	if (rc < 0) {
-		DP_ERR("altmode probe notifier registration failed: %d\n", rc);
-		goto error;
+	if (typec_bridge) {
+		altmode->typec_bridge = true;
+		dp_altmode_typec_bridge_register(altmode, dp_altmode_notify);
+	} else {
+		rc = altmode_register_notifier(dev, dp_altmode_register, altmode);
+		if (rc < 0) {
+			DP_ERR("altmode probe notifier registration failed: %d\n", rc);
+			goto error;
+		}
 	}
 
 	DP_DEBUG("success\n");
