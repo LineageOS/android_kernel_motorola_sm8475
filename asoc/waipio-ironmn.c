@@ -823,6 +823,8 @@ static struct snd_soc_dai_link msm_mi2s_dai_links[] = {
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		SND_SOC_DAILINK_REG(tert_mi2s_rx),
+		// IKSWS-4009: npaulo: Enable Reed codec only when it's enabled in DT. See CR for more info
+                //SND_SOC_DAILINK_REG(tert_mi2s_rx_reed),
 	},
 	{
 		.name = LPASS_BE_TERT_MI2S_TX,
@@ -833,6 +835,8 @@ static struct snd_soc_dai_link msm_mi2s_dai_links[] = {
 		.ops = &msm_common_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(tert_mi2s_tx),
+		// IKSWS-4009: npaulo: Enable Reed codec only when it's enabled in DT. See CR for more info
+                //SND_SOC_DAILINK_REG(tert_mi2s_tx_reed),
 	},
 	{
 		.name = LPASS_BE_QUAT_MI2S_RX,
