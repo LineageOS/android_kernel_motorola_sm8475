@@ -72,7 +72,7 @@ static struct reg_default wsa883x_defaults[] = {
 	{WSA883X_PA_STATUS1,                 0x00},
 	{WSA883X_PA_STATUS2,                 0x80},
 	{WSA883X_EN_CTRL,                    0x44},
-	{WSA883X_CURRENT_LIMIT,              0xCC},
+	{WSA883X_CURRENT_LIMIT,              0x06},
 	{WSA883X_IBIAS1,                     0x00},
 	{WSA883X_IBIAS2,                     0x00},
 	{WSA883X_IBIAS3,                     0x00},
