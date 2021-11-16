@@ -31,7 +31,11 @@ struct dp_altmode_private {
 	u32 lanes;
 };
 
-extern dp_altmode_typec_bridge_register(struct dp_altmode_private *altmode, int (*cb)(void *, void *, size_t));
+#if IS_ENABLED(CONFIG_TYPEC_QTI_ALTMODE)
+extern int dp_altmode_typec_bridge_register(struct dp_altmode_private *altmode, int (*cb)(void *, void *, size_t));
+#else
+static int dp_altmode_typec_bridge_register(struct dp_altmode_private *altmode, int (*cb)(void *, void *, size_t)) { return -ENOTSUPP; }
+#endif
 
 enum dp_altmode_pin_assignment {
 	DPAM_HPD_OUT,
