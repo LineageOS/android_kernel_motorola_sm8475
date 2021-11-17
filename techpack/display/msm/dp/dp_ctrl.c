@@ -551,6 +551,22 @@ static int dp_ctrl_link_train(struct dp_ctrl_private *ctrl)
 	ctrl->link->phy_params.p_level = 0;
 	ctrl->link->phy_params.v_level = 0;
 
+	if ( ctrl->panel->edid_ctrl && ctrl->panel->edid_ctrl->edid ) {
+		if(!strncmp(ctrl->panel->edid_ctrl->vendor_id, "LEN", 3)
+		&& ctrl->panel->edid_ctrl->edid->prod_code[0] == 0x1
+		&& ctrl->panel->edid_ctrl->edid->prod_code[1] == 0x75) {
+			ctrl->link->phy_params.p_level = 0;
+			ctrl->link->phy_params.v_level = ctrl->link->phy_params.max_v_level;
+			DP_INFO("force vx level to max for Lenovo ARGlass\n");
+		}
+		DP_INFO("init vx px level to %d %d for %s, prod_id %x %x\n",
+				ctrl->link->phy_params.v_level,
+				ctrl->link->phy_params.p_level,
+				ctrl->panel->edid_ctrl->vendor_id,
+				ctrl->panel->edid_ctrl->edid->prod_code[0] ,
+				ctrl->panel->edid_ctrl->edid->prod_code[1]);
+	}
+
 	link_info.num_lanes = ctrl->link->link_params.lane_count;
 	link_info.rate = drm_dp_bw_code_to_link_rate(
 		ctrl->link->link_params.bw_code);
