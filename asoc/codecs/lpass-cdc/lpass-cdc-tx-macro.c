@@ -929,6 +929,9 @@ static int lpass_cdc_tx_macro_enable_dec(struct snd_soc_dapm_widget *w,
 
 	tx_priv->pcm_rate[decimator] = (snd_soc_component_read(component,
 				     tx_fs_reg) & 0x0F);
+	if(!is_amic_enabled(component, decimator))
+		lpass_cdc_tx_macro_enable_dmic(w, kcontrol, event, adc_mux0_reg);
+
 
 	if(!is_amic_enabled(component, decimator))
 		lpass_cdc_tx_macro_enable_dmic(w, kcontrol, event, adc_mux0_reg);
