@@ -166,6 +166,8 @@ enum {
 	WSA883X_NUM_IRQS,
 };
 
+static int detect_result = WSA883x_CODEC2_UNKNOWN;
+
 static const struct regmap_irq wsa883x_irqs[WSA883X_NUM_IRQS] = {
 	REGMAP_IRQ_REG(WSA883X_IRQ_INT_SAF2WAR, 0, 0x01),
 	REGMAP_IRQ_REG(WSA883X_IRQ_INT_WAR2SAF, 0, 0x02),
@@ -755,6 +757,12 @@ static ssize_t wsa883x_variant_read(struct snd_info_entry *entry,
 static struct snd_info_entry_ops wsa883x_variant_ops = {
 	.read = wsa883x_variant_read,
 };
+
+int wsa883x_codec_detect(void)
+{
+	return detect_result;
+}
+EXPORT_SYMBOL(wsa883x_codec_detect);
 
 /*
  * wsa883x_codec_info_create_codec_entry - creates wsa883x module
@@ -1680,6 +1688,8 @@ static struct snd_soc_dai_driver wsa_dai[] = {
 	},
 };
 
+#define WSA_PROBE_TRY_DETECT_COUNT  3
+
 static int wsa883x_swr_probe(struct swr_device *pdev)
 {
 	int ret = 0, i = 0;
@@ -1729,12 +1739,23 @@ static int wsa883x_swr_probe(struct swr_device *pdev)
 	usleep_range(5000, 5010);
 	ret = swr_get_logical_dev_num(pdev, pdev->addr, &devnum);
 	if (ret) {
-		dev_dbg(&pdev->dev,
-			"%s get devnum %d for dev addr %lx failed\n",
-			__func__, devnum, pdev->addr);
+		static int wsa2_detect_count = 0;
+		dev_warn(&pdev->dev,
+			"%s get devnum %d for dev addr %lx failed, ret = %d\n",
+			__func__, devnum, pdev->addr, ret);
 		ret = -EPROBE_DEFER;
+		if (((char)(pdev->addr & 0xF)) == 0x2) {
+			wsa2_detect_count++;
+			if (wsa2_detect_count > WSA_PROBE_TRY_DETECT_COUNT) {
+				detect_result = WSA883x_CODEC2_NOT_DETECTED;
+				ret = -EIO;
+			}
+		}
 		goto err_supply;
 	}
+	if (((char)(pdev->addr & 0xF)) == 0x2)
+		detect_result = WSA883x_CODEC2_DETECTED;
+
 	pdev->dev_num = devnum;
 
 	wsa883x->regmap = devm_regmap_init_swr(pdev,
@@ -1930,7 +1951,6 @@ static int wsa883x_swr_probe(struct swr_device *pdev)
 	}
 }
 #endif
-
 	return 0;
 
 err_mem:

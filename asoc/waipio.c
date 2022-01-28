@@ -132,6 +132,14 @@ static struct wcd_mbhc_config wcd_mbhc_cfg = {
 	.moisture_duty_cycle_en = true,
 };
 
+static struct snd_soc_dapm_route left_wsa_audio_paths[] = {
+	{"SpkrLeft IN", NULL, "WSA_SPK1 OUT"},
+};
+
+static struct snd_soc_dapm_route right_wsa_audio_paths[] = {
+	{"SpkrRight IN", NULL, "WSA_SPK2 OUT"},
+};
+
 static bool msm_usbc_swap_gnd_mic(struct snd_soc_component *component, bool active)
 {
 	struct snd_soc_card *card = component->card;
@@ -619,6 +627,64 @@ static struct snd_soc_dai_link ext_disp_be_dai_link[] = {
 		.ignore_pmdown_time = 1,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(display_port),
+	},
+};
+
+static struct snd_soc_dai_link msm_left_wsa_cdc_dma_be_dai_links[] = {
+	/* WSA CDC DMA Backend DAI Links */
+	{
+		.name = LPASS_BE_WSA_CDC_DMA_RX_0,
+		.stream_name = LPASS_BE_WSA_CDC_DMA_RX_0,
+		.playback_only = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+			SND_SOC_DPCM_TRIGGER_POST},
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+		.ops = &msm_common_be_ops,
+		SND_SOC_DAILINK_REG(left_wsa_dma_rx0),
+		.init = &msm_int_wsa_init,
+	},
+	{
+		.name = LPASS_BE_WSA_CDC_DMA_RX_1,
+		.stream_name = LPASS_BE_WSA_CDC_DMA_RX_1,
+		.playback_only = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+			SND_SOC_DPCM_TRIGGER_POST},
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+		.ops = &msm_common_be_ops,
+		SND_SOC_DAILINK_REG(left_wsa_dma_rx1),
+	},
+	{
+		.name = LPASS_BE_WSA_CDC_DMA_TX_1,
+		.stream_name = LPASS_BE_WSA_CDC_DMA_TX_1,
+		.capture_only = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+			SND_SOC_DPCM_TRIGGER_POST},
+		.ignore_suspend = 1,
+		.ops = &msm_common_be_ops,
+		SND_SOC_DAILINK_REG(left_wsa_dma_tx1),
+	},
+	{
+		.name = LPASS_BE_WSA_CDC_DMA_TX_0,
+		.stream_name = LPASS_BE_WSA_CDC_DMA_TX_0,
+		.capture_only = 1,
+		.ignore_suspend = 1,
+		.ops = &msm_common_be_ops,
+		/* .no_host_mode = SND_SOC_DAI_LINK_NO_HOST, */
+		SND_SOC_DAILINK_REG(vi_feedback),
+	},
+	{
+		.name = LPASS_BE_WSA_CDC_DMA_RX_0_VIRT,
+		.stream_name = LPASS_BE_WSA_CDC_DMA_RX_0_VIRT,
+		.playback_only = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+			SND_SOC_DPCM_TRIGGER_POST},
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+		.ops = &msm_common_be_ops,
+		SND_SOC_DAILINK_REG(left_wsa_dma_rx0),
+		.init = &msm_int_wsa_init,
 	},
 };
 
@@ -1408,6 +1474,11 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev, int w
 
 		switch (wsa_max_devs) {
 		case MONO_SPEAKER:
+			memcpy(msm_waipio_dai_links + total_links,
+			       msm_left_wsa_cdc_dma_be_dai_links,
+			       sizeof(msm_left_wsa_cdc_dma_be_dai_links));
+			total_links += ARRAY_SIZE(msm_left_wsa_cdc_dma_be_dai_links);
+			break;
 		case STEREO_SPEAKER:
 			memcpy(msm_waipio_dai_links + total_links,
 			       msm_wsa_cdc_dma_be_dai_links,
@@ -1540,6 +1611,9 @@ static int msm_int_wsa_init(struct snd_soc_pcm_runtime *rtd)
 
 		wsa883x_codec_info_create_codec_entry(pdata->codec_root,
 				component);
+
+		snd_soc_dapm_add_routes(&rtd->card->dapm, left_wsa_audio_paths,
+					ARRAY_SIZE(left_wsa_audio_paths));
 	}
 
 	/* If current platform has more than one WSA */
@@ -1556,6 +1630,9 @@ static int msm_int_wsa_init(struct snd_soc_pcm_runtime *rtd)
 
 		wsa883x_codec_info_create_codec_entry(pdata->codec_root,
 			component);
+
+		snd_soc_dapm_add_routes(&rtd->card->dapm, right_wsa_audio_paths,
+					ARRAY_SIZE(right_wsa_audio_paths));
 	}
 
 	if (pdata->wsa_max_devs > 2) {
@@ -1943,6 +2020,7 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 	struct msm_asoc_mach_data *pdata = NULL;
 	int ret = 0;
 	struct clk *lpass_audio_hw_vote = NULL;
+	int detect_result;
 
 	if (!pdev->dev.of_node) {
 		dev_err(&pdev->dev, "%s: No platform supplied from device tree\n", __func__);
@@ -1967,6 +2045,16 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 		pdata->wsa_max_devs = 0;
 	}
 
+	if (pdata->wsa_max_devs > 1) {
+		detect_result = wsa883x_codec_detect();
+		pr_info("%s: detect result %d\n", __func__, detect_result);
+		if (detect_result == WSA883x_CODEC2_UNKNOWN) {
+			ret = -EPROBE_DEFER;
+			goto err;
+		} else if (detect_result == WSA883x_CODEC2_NOT_DETECTED)
+			pdata->wsa_max_devs = 1;
+	}
+	pr_info("%s: wsa_max_devs %d\n", __func__, pdata->wsa_max_devs);
 	card = populate_snd_card_dailinks(&pdev->dev, pdata->wsa_max_devs);
 	if (!card) {
 		dev_err(&pdev->dev, "%s: Card uninitialized\n", __func__);
