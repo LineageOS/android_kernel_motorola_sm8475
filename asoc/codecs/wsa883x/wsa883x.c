@@ -1688,7 +1688,7 @@ static struct snd_soc_dai_driver wsa_dai[] = {
 	},
 };
 
-#define WSA_PROBE_TRY_DETECT_COUNT  3
+#define WSA_PROBE_TRY_DETECT_COUNT  2
 
 static int wsa883x_swr_probe(struct swr_device *pdev)
 {
@@ -1746,7 +1746,7 @@ static int wsa883x_swr_probe(struct swr_device *pdev)
 		ret = -EPROBE_DEFER;
 		if (((char)(pdev->addr & 0xF)) == 0x2) {
 			wsa2_detect_count++;
-			if (wsa2_detect_count > WSA_PROBE_TRY_DETECT_COUNT) {
+			if (wsa2_detect_count >= WSA_PROBE_TRY_DETECT_COUNT) {
 				detect_result = WSA883x_CODEC2_NOT_DETECTED;
 				ret = -EIO;
 			}
