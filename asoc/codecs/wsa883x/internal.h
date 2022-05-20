@@ -95,6 +95,7 @@ struct wsa883x_priv {
 	int dev_mode;
 	int comp_offset;
 	struct mutex res_lock;
+	struct mutex recovery_lock;
 	struct snd_info_entry *entry;
 	struct snd_info_entry *version_entry;
 	struct snd_info_entry *variant_entry;
@@ -111,6 +112,7 @@ struct wsa883x_priv {
 	struct dentry *debugfs_peek;
 	struct dentry *debugfs_poke;
 	struct dentry *debugfs_reg_dump;
+	struct dentry *debugfs_wsa_test;
 	unsigned int read_data;
 #endif
 	struct device_node *parent_np;
@@ -125,6 +127,10 @@ struct wsa883x_priv {
 	unsigned long status_mask;
 	struct snd_soc_dai_driver *dai_driver;
 	struct snd_soc_component_driver *driver;
+
+	struct delayed_work recovery_work;
+	bool need_recovery;
+	bool playing;
 };
 
 #endif /* WSA883X_INTERNAL_H */
