@@ -1605,7 +1605,7 @@ static void wsa883x_recovery_work(struct work_struct *work)
 					wsa883x->swr_slave->dev_num,
 					false);
 
-	msleep(5000);
+	msleep(100);
 
 	num_port = 0;
 	// SND_SOC_DAPM_PRE_PMU: dac_port
@@ -1719,6 +1719,8 @@ static void wsa883x_recovery_work(struct work_struct *work)
 	mutex_unlock(&wsa883x->res_lock);
 
 exit:
+	if (wsa883x->playing)
+		schedule_delayed_work(&wsa883x->recovery_work, msecs_to_jiffies(5000));
 	dev_info(component->dev, "%s: exit\n", __func__);
 }
 
