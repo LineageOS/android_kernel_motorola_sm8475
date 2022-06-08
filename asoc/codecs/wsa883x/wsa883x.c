@@ -506,21 +506,33 @@ static void wsa883x_regcache_sync(struct wsa883x_priv *wsa883x)
 
 static irqreturn_t wsa883x_saf2war_handle_irq(int irq, void *data)
 {
-	pr_err_ratelimited("%s: interrupt for irq =%d triggered\n",
+	struct wsa883x_priv *wsa883x = data;
+
+	if (!wsa883x)
+		return IRQ_NONE;
+	dev_err_ratelimited(wsa883x->component->dev, "%s: interrupt for irq =%d triggered\n",
 			   __func__, irq);
 	return IRQ_HANDLED;
 }
 
 static irqreturn_t wsa883x_war2saf_handle_irq(int irq, void *data)
 {
-	pr_err_ratelimited("%s: interrupt for irq =%d triggered\n",
+	struct wsa883x_priv *wsa883x = data;
+
+	if (!wsa883x)
+		return IRQ_NONE;
+	dev_err_ratelimited(wsa883x->component->dev, "%s: interrupt for irq =%d triggered\n",
 			   __func__, irq);
 	return IRQ_HANDLED;
 }
 
 static irqreturn_t wsa883x_otp_handle_irq(int irq, void *data)
 {
-	pr_err_ratelimited("%s: interrupt for irq =%d triggered\n",
+	struct wsa883x_priv *wsa883x = data;
+
+	if (!wsa883x)
+		return IRQ_NONE;
+	dev_err_ratelimited(wsa883x->component->dev, "%s: interrupt for irq =%d triggered\n",
 			   __func__, irq);
 	return IRQ_HANDLED;
 }
@@ -530,10 +542,10 @@ static irqreturn_t wsa883x_ocp_handle_irq(int irq, void *data)
 {
 	struct wsa883x_priv *wsa883x = data;
 
-	pr_err_ratelimited("%s: interrupt for irq =%d triggered\n",
-			   __func__, irq);
 	if (!wsa883x)
 		return IRQ_NONE;
+	dev_err_ratelimited(wsa883x->component->dev, "%s: interrupt for irq =%d triggered\n",
+			   __func__, irq);
 
 	mutex_lock(&wsa883x->recovery_lock);
 	wsa883x->need_recovery = true;
@@ -545,7 +557,11 @@ static irqreturn_t wsa883x_ocp_handle_irq(int irq, void *data)
 
 static irqreturn_t wsa883x_clip_handle_irq(int irq, void *data)
 {
-	pr_err_ratelimited("%s: interrupt for irq =%d triggered\n",
+	struct wsa883x_priv *wsa883x = data;
+
+	if (!wsa883x)
+		return IRQ_NONE;
+	dev_err_ratelimited(wsa883x->component->dev, "%s: interrupt for irq =%d triggered\n",
 			   __func__, irq);
 	return IRQ_HANDLED;
 }
@@ -554,11 +570,11 @@ static irqreturn_t wsa883x_clip_handle_irq(int irq, void *data)
 static irqreturn_t wsa883x_pdm_wd_handle_irq(int irq, void *data)
 {
 	struct wsa883x_priv *wsa883x = data;
-	pr_err_ratelimited("%s: interrupt for irq =%d triggered\n",
-			   __func__, irq);
 
 	if (!wsa883x)
 		return IRQ_NONE;
+	dev_err_ratelimited(wsa883x->component->dev, "%s: interrupt for irq =%d triggered\n",
+			   __func__, irq);
 
 	mutex_lock(&wsa883x->recovery_lock);
 	wsa883x->need_recovery = true;
@@ -573,10 +589,10 @@ static irqreturn_t wsa883x_clk_wd_handle_irq(int irq, void *data)
 {
 	struct wsa883x_priv *wsa883x = data;
 
-	pr_err_ratelimited("%s: interrupt for irq =%d triggered\n",
-			   __func__, irq);
 	if (!wsa883x)
 		return IRQ_NONE;
+	dev_err_ratelimited(wsa883x->component->dev, "%s: interrupt for irq =%d triggered\n",
+			   __func__, irq);
 
 	mutex_lock(&wsa883x->recovery_lock);
 	wsa883x->need_recovery = true;
@@ -588,14 +604,22 @@ static irqreturn_t wsa883x_clk_wd_handle_irq(int irq, void *data)
 
 static irqreturn_t wsa883x_ext_int_handle_irq(int irq, void *data)
 {
-	pr_err_ratelimited("%s: interrupt for irq =%d triggered\n",
+	struct wsa883x_priv *wsa883x = data;
+
+	if (!wsa883x)
+		return IRQ_NONE;
+	dev_err_ratelimited(wsa883x->component->dev, "%s: interrupt for irq =%d triggered\n",
 			   __func__, irq);
 	return IRQ_HANDLED;
 }
 
 static irqreturn_t wsa883x_uvlo_handle_irq(int irq, void *data)
 {
-	pr_err_ratelimited("%s: interrupt for irq =%d triggered\n",
+	struct wsa883x_priv *wsa883x = data;
+
+	if (!wsa883x)
+		return IRQ_NONE;
+	dev_err_ratelimited(wsa883x->component->dev, "%s: interrupt for irq =%d triggered\n",
 			   __func__, irq);
 	return IRQ_HANDLED;
 }
@@ -614,14 +638,13 @@ static irqreturn_t wsa883x_pa_on_err_handle_irq(int irq, void *data)
 	if (!component)
 		return IRQ_NONE;
 
+	dev_err_ratelimited(component->dev, "%s: interrupt for irq =%d triggered\n",
+        __func__, irq);
 	pa_fsm_sta = (snd_soc_component_read(component, WSA883X_PA_FSM_STA)
 			& 0x70);
 	if (pa_fsm_sta)
 		pa_fsm_err = snd_soc_component_read(component,
 					WSA883X_PA_FSM_ERR_COND);
-
-	pr_err_ratelimited("%s: interrupt for irq =%d triggered\n",
-			   __func__, irq);
 
 	snd_soc_component_update_bits(component, WSA883X_PA_FSM_CTL,
 				0x10, 0x00);
