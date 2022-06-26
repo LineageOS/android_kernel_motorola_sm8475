@@ -94,6 +94,10 @@
 	((event == DRM_PANEL_EVENT_UNBLANK) && \
 	 (!evdata.early_trigger))
 
+#define EVENT_DISPLAY_LP \
+	((event == DRM_PANEL_EVENT_BLANK_LP) && \
+	 (!evdata.early_trigger))
+
 #else /* CONFIG_DRM_PANEL_EVENT_NOTIFICATIONS */
 #if defined(CONFIG_DRM_PANEL_NOTIFICATIONS)
 #include <drm/drm_panel.h>
