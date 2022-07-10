@@ -807,13 +807,12 @@ static int dp_aux_configure_aux_switch(struct dp_aux *dp_aux,
 					switch_flip ? 1 : 0);
 		DP_INFO("dp_aux_switch: en=%d, cc=%d, sw_en=%d, sw_flip=%d\n",
 				enable, orientation, switch_enable, switch_flip);
+	} else {
+		DP_INFO("%s: use fsa4480 for aux switch\n", __func__);
+		rc = fsa4480_switch_event(aux->aux_switch_node, event);
+		if (rc)
+			DP_AUX_ERR(dp_aux, "failed to configure fsa4480 i2c device (%d)\n", rc);
 	}
-
-	/*
-	rc = fsa4480_switch_event(aux->aux_switch_node, event);
-	if (rc)
-		DP_AUX_ERR(dp_aux, "failed to configure fsa4480 i2c device (%d)\n", rc);
-	*/
 end:
 	return rc;
 }

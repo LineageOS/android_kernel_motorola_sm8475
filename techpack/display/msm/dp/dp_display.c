@@ -1395,14 +1395,19 @@ static int dp_display_init_aux_switch(struct dp_display_private *dp)
 {
 	int rc = 0;
 	struct notifier_block nb;
-	//const u32 max_retries = 50;
-	//u32 retry;
+	const u32 max_retries = 50;
+	u32 retry;
 
 	if (dp->aux_switch_ready)
 	       return rc;
 
 	SDE_EVT32_EXTERNAL(SDE_EVTLOG_FUNC_ENTRY);
 
+	/*
+	 * If we do not define AUX switch control gpio, then we will regard using
+	 * FSA4480 or the same chips.
+	*/
+	if (!gpio_is_valid(dp->aux->dp_aux_switch_flip_gpio)) {
 	nb.notifier_call = dp_display_fsa4480_callback;
 	nb.priority = 0;
 
@@ -1410,7 +1415,6 @@ static int dp_display_init_aux_switch(struct dp_display_private *dp)
 	 * Iteratively wait for reg notifier which confirms that fsa driver is probed.
 	 * Bootup DP with cable connected usecase can hit this scenario.
 	 */
-	/*
 	for (retry = 0; retry < max_retries; retry++) {
 		rc = fsa4480_reg_notifier(&nb, dp->aux_switch_node);
 		if (rc == 0) {
@@ -1430,7 +1434,8 @@ static int dp_display_init_aux_switch(struct dp_display_private *dp)
 	}
 
 	fsa4480_unreg_notifier(&nb, dp->aux_switch_node);
-	*/
+	}
+
 	SDE_EVT32_EXTERNAL(SDE_EVTLOG_FUNC_EXIT, rc);
 	return rc;
 }
