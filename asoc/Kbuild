@@ -171,7 +171,11 @@ ifneq (,$(filter ironmn%, $(TARGET_PRODUCT)))
 else ifneq (,$(filter geneva%, $(TARGET_PRODUCT)))
 	MACHINE_OBJS += waipio-parrot.o
 else
+ifneq (,$(filter felix%, $(TARGET_PRODUCT)))
+	MACHINE_OBJS += waipio-felix.o
+else
 	MACHINE_OBJS += waipio.o
+endif
 endif
 endif
 
