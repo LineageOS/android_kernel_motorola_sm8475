@@ -83,7 +83,7 @@ void digital_cdc_rsc_mgr_hw_vote_reset(struct clk* vote_handle)
 		clk_disable_unprepare(vote_handle);
 		count++;
 	}
-	pr_debug("%s: Vote count after SSR: %d\n", __func__, count);
+	pr_err("%s: Vote count after SSR: %d\n", __func__, count);
 	trace_printk("%s: Vote count after SSR: %d\n", __func__, count);
 
 	while (count--)
