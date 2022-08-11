@@ -407,6 +407,28 @@ SND_SOC_DAILINK_DEFS(pri_tdm_tx_franklin,
                            COMP_CODEC("cirrus-spk-3", "cs35l45")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
 
+// [START] felix
+SND_SOC_DAILINK_DEFS(pri_mi2s_rx_felix,
+        DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
+        DAILINK_COMP_ARRAY(COMP_CODEC("cirrus-spk", "cs35l45")),
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+
+SND_SOC_DAILINK_DEFS(pri_mi2s_tx_felix,
+        DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
+        DAILINK_COMP_ARRAY(COMP_CODEC("cirrus-spk", "cs35l45")),
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+
+SND_SOC_DAILINK_DEFS(pri_tdm_rx_felix,
+        DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
+        DAILINK_COMP_ARRAY(COMP_CODEC("cirrus-spk", "cs35l45")),
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+
+SND_SOC_DAILINK_DEFS(pri_tdm_tx_felix,
+        DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
+        DAILINK_COMP_ARRAY(COMP_CODEC("cirrus-spk", "cs35l45")),
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+// [END] felix
+
 SND_SOC_DAILINK_DEFS(tert_mi2s_rx_reed,
 	DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("msm-stub-codec.1", "msm-stub-rx")),

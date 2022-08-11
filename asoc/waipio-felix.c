@@ -299,6 +299,40 @@ static struct snd_soc_ops msm_common_be_ops = {
 	.shutdown = msm_common_snd_shutdown,
 };
 
+#define CIRRUS_AMP_SLCK_RATE	1536000
+int msm_cirrus_snd_startup(struct snd_pcm_substream *substream)
+{
+	int ret = 0, i = 0;
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_card *card = rtd->card;
+	struct snd_soc_dai *codec_dai;
+
+	ret = msm_common_snd_startup(substream);
+	if (ret) {
+		dev_err(card->dev, "%s: Failed to startup. error %d\n",
+				__func__, ret);
+		return ret;
+	}
+
+	for_each_rtd_codec_dais(rtd, i, codec_dai) {
+		ret = snd_soc_dai_set_sysclk(codec_dai, 0, CIRRUS_AMP_SLCK_RATE,
+				SND_SOC_CLOCK_IN);
+		if (ret) {
+			dev_err(card->dev, "%s: Failed to set dai sycclk, error %d\n",
+					__func__, ret);
+			return ret;
+		}
+	}
+
+	return ret;
+}
+
+static struct snd_soc_ops msm_cirrus_be_ops = {
+	.hw_params = msm_common_snd_hw_params,
+	.startup = msm_cirrus_snd_startup,
+	.shutdown = msm_common_snd_shutdown,
+};
+
 static int msm_dmic_event(struct snd_soc_dapm_widget *w,
 			  struct snd_kcontrol *kcontrol, int event)
 {
@@ -973,10 +1007,10 @@ static struct snd_soc_dai_link msm_mi2s_dai_links[] = {
 		.playback_only = 1,
 		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
 			SND_SOC_DPCM_TRIGGER_POST},
-		.ops = &msm_common_be_ops,
+		.ops = &msm_cirrus_be_ops,
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
-		SND_SOC_DAILINK_REG(pri_mi2s_rx),
+		SND_SOC_DAILINK_REG(pri_mi2s_rx_felix),
 	},
 	{
 		.name = LPASS_BE_PRI_MI2S_TX,
@@ -984,9 +1018,9 @@ static struct snd_soc_dai_link msm_mi2s_dai_links[] = {
 		.capture_only = 1,
 		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
 			SND_SOC_DPCM_TRIGGER_POST},
-		.ops = &msm_common_be_ops,
+		.ops = &msm_cirrus_be_ops,
 		.ignore_suspend = 1,
-		SND_SOC_DAILINK_REG(pri_mi2s_tx),
+		SND_SOC_DAILINK_REG(pri_mi2s_tx_felix),
 	},
 	{
 		.name = LPASS_BE_SEC_MI2S_RX,
@@ -1718,6 +1752,7 @@ static int msm_rx_tx_codec_init(struct snd_soc_pcm_runtime *rtd)
 	lpass_cdc_register_wake_irq(lpass_cdc_component, false);
 
 	if (pdata->wcd_disabled) {
+	        codec_reg_done = true;
 		lpass_cdc_set_port_map(lpass_cdc_component, ARRAY_SIZE(sm_port_map), sm_port_map);
 		goto done;
 	}
