@@ -1,9 +1,8 @@
 #ifndef __AW882XX_DSP_H__
 #define __AW882XX_DSP_H__
 
-//#define AW_QCOM_PLATFORM
-// TBD. Temp comment for compile
-/*#define AW_AUDIOREACH_PLATFORM*/
+/*#define AW_QCOM_PLATFORM*/
+#define AW_AUDIOREACH_PLATFORM
 
 /*factor form 12bit(4096) to 1000*/
 #define AW_DSP_RE_TO_SHOW_RE(re)	(((re) * (1000)) >> (12))
@@ -53,7 +52,7 @@ int aw882xx_dsp_read_st(struct aw_device *aw_dev, int32_t *r0, int32_t *te);
 int aw882xx_dsp_read_te(struct aw_device *aw_dev, int32_t *te);
 int aw882xx_dsp_get_dc_status(struct aw_device *aw_dev);
 int aw882xx_dsp_hmute_en(struct aw_device *aw_dev, bool is_hmute);
-int aw882xx_dsp_cali_en(struct aw_device *aw_dev, bool is_enable);
+int aw882xx_dsp_cali_en(struct aw_device *aw_dev, int32_t cali_msg_data);
 int aw882xx_dsp_read_f0(struct aw_device *aw_dev, int32_t *f0);
 int aw882xx_dsp_read_f0_q(struct aw_device *aw_dev, int32_t *f0, int32_t *q);
 int aw882xx_dsp_read_cali_data(struct aw_device *aw_dev, char *data, unsigned int data_len);
