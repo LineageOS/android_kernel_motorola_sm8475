@@ -427,6 +427,13 @@ SND_SOC_DAILINK_DEFS(pri_tdm_tx_felix,
         DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
         DAILINK_COMP_ARRAY(COMP_CODEC("cirrus-spk", "cs35l45")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+
+// Awinic Earpiece
+SND_SOC_DAILINK_DEFS(tert_mi2s_rx_felix,
+        DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
+	DAILINK_COMP_ARRAY(COMP_CODEC("aw882xx_smartpa.0-0034", "aw882xx-aif-1-34")),
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+
 // [END] felix
 
 SND_SOC_DAILINK_DEFS(tert_mi2s_rx_reed,

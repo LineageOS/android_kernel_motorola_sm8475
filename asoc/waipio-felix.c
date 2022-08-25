@@ -1052,7 +1052,7 @@ static struct snd_soc_dai_link msm_mi2s_dai_links[] = {
 		.ops = &msm_common_be_ops,
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
-		SND_SOC_DAILINK_REG(tert_mi2s_rx),
+		SND_SOC_DAILINK_REG(tert_mi2s_rx_felix),
 	},
 	{
 		.name = LPASS_BE_TERT_MI2S_TX,
