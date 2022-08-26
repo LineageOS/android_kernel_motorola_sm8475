@@ -168,7 +168,7 @@ endif
 ifdef CONFIG_SND_SOC_WAIPIO
 ifneq (,$(filter ironmn%, $(TARGET_PRODUCT)))
 	MACHINE_OBJS += waipio-ironmn.o
-else ifneq (,$(filter geneva%, $(TARGET_PRODUCT)))
+else ifneq (,$(filter genev%, $(TARGET_PRODUCT)))
 	MACHINE_OBJS += waipio-parrot.o
 else
 ifneq (,$(filter felix%, $(TARGET_PRODUCT)))
