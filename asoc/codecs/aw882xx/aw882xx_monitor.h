@@ -137,6 +137,10 @@ struct aw_monitor_trace {
 	struct aw_table aw_table;
 };
 
+enum aw_monitor_mode {
+	AW_MON_KERNEL_MODE = 0,
+	AW_MON_HAL_MODE,
+};
 
 /******************************************************************
 * struct aw882xx monitor
@@ -145,9 +149,11 @@ struct aw_monitor_desc {
 	struct delayed_work delay_work;
 	struct aw_monitor_cfg monitor_cfg;
 
+	bool mon_start_flag;
 	uint8_t first_entry;
 	uint8_t samp_count;
 	uint8_t db_offset;
+	uint8_t monitor_mode;
 
 	uint32_t pre_vmax;
 	struct aw_monitor_trace temp_trace;
@@ -168,6 +174,9 @@ void aw882xx_monitor_init(struct aw_monitor_desc *monitor_desc);
 void aw882xx_monitor_deinit(struct aw_monitor_desc *monitor_desc);
 int aw882xx_monitor_parse_fw(struct aw_monitor_desc *monitor_desc,
 				uint8_t *data, uint32_t data_len);
+
+void aw882xx_monitor_hal_work(struct aw_monitor_desc *monitor_desc, uint32_t *vmax);
+void aw882xx_monitor_hal_get_time(struct aw_monitor_desc *monitor_desc, uint32_t *time);
 
 #endif
 

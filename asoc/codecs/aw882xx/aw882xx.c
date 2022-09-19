@@ -37,7 +37,7 @@
 #include "aw882xx_bin_parse.h"
 #include "aw882xx_spin.h"
 
-#define AW882XX_DRIVER_VERSION "v1.13.0"
+#define AW882XX_DRIVER_VERSION "v1.13.0.1"
 #define AW882XX_I2C_NAME "aw882xx_smartpa"
 
 #define AW_READ_CHIPID_RETRIES		5	/* 5 times */
@@ -661,6 +661,43 @@ static int aw882xx_monitor_set(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int aw882xx_hal_monitor_work_info(struct snd_kcontrol *kcontrol,
+			 struct snd_ctl_elem_info *uinfo)
+{
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+	uinfo->count = 1;
+	uinfo->value.integer.min = INT_MIN;
+	uinfo->value.integer.max = 0;
+
+	return 0;
+}
+
+static int aw882xx_hal_monitor_work_get(struct snd_kcontrol *kcontrol,
+			struct snd_ctl_elem_value *ucontrol)
+{
+	aw_snd_soc_codec_t *codec =
+		aw_componet_codec_ops.kcontrol_codec(kcontrol);
+	struct aw882xx *aw882xx =
+		aw_componet_codec_ops.codec_get_drvdata(codec);
+	struct aw_device *aw_dev = aw882xx->aw_pa;
+	uint32_t vmax = 0;
+
+	mutex_lock(&aw882xx->lock);
+	aw882xx_dev_monitor_hal_work(aw_dev, &vmax);
+
+	ucontrol->value.integer.value[0] = vmax;
+	mutex_unlock(&aw882xx->lock);
+
+	aw_dev_info(aw882xx->dev, "vmax is 0x%x", vmax);
+	return 0;
+}
+
+static int aw882xx_hal_monitor_work_set(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	return 0;
+}
+
 static int aw882xx_volume_info(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_info *uinfo)
 {
@@ -784,6 +821,18 @@ static int aw882xx_dynamic_create_controls(struct aw882xx *aw882xx)
 	aw882xx_dev_control[KCTL_TYPE_VOLUME].info = aw882xx_volume_info;
 	aw882xx_dev_control[KCTL_TYPE_VOLUME].get = aw882xx_volume_get;
 	aw882xx_dev_control[KCTL_TYPE_VOLUME].put = aw882xx_volume_put;
+
+	kctl_name = devm_kzalloc(aw882xx->codec->dev, AW_NAME_BUF_MAX, GFP_KERNEL);
+	if (!kctl_name)
+		return -ENOMEM;
+
+	snprintf(kctl_name, AW_NAME_BUF_MAX, "aw_dev_%d_hal_mon_work", aw882xx->aw_pa->channel);
+
+	aw882xx_dev_control[KCTL_TYPE_MON_HAL].name = kctl_name;
+	aw882xx_dev_control[KCTL_TYPE_MON_HAL].iface = SNDRV_CTL_ELEM_IFACE_MIXER;
+	aw882xx_dev_control[KCTL_TYPE_MON_HAL].info = aw882xx_hal_monitor_work_info;
+	aw882xx_dev_control[KCTL_TYPE_MON_HAL].get = aw882xx_hal_monitor_work_get;
+	aw882xx_dev_control[KCTL_TYPE_MON_HAL].put = aw882xx_hal_monitor_work_set;
 
 	aw_componet_codec_ops.add_codec_controls(aw882xx->codec,
 						aw882xx_dev_control, AW_KCTL_NUM);
@@ -1276,6 +1325,30 @@ static int aw882xx_set_fade_out_time(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int aw882xx_hal_get_monitor_time(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	unsigned int time;
+	aw_snd_soc_codec_t *codec =
+		aw_componet_codec_ops.kcontrol_codec(kcontrol);
+	struct aw882xx *aw882xx =
+		aw_componet_codec_ops.codec_get_drvdata(codec);
+
+	aw882xx_dev_monitor_hal_get_time(aw882xx->aw_pa, &time);
+	ucontrol->value.integer.value[0] = time;
+
+	aw_pr_dbg("get monitor time %ld", ucontrol->value.integer.value[0]);
+
+	return 0;
+}
+
+static int aw882xx_hal_set_monitor_time(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+
+	return 0;
+}
+
 static const struct soc_enum aw882xx_snd_enum[] = {
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(aw882xx_switch), aw882xx_switch),
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(aw882xx_spin), aw882xx_spin),
@@ -1292,6 +1365,9 @@ static struct snd_kcontrol_new aw882xx_controls[] = {
 		aw882xx_get_fade_in_time, aw882xx_set_fade_in_time),
 	SOC_SINGLE_EXT("aw882xx_fadeout_us", 0, 0, 1000000, 0,
 		aw882xx_get_fade_out_time, aw882xx_set_fade_out_time),
+	SOC_SINGLE_EXT("aw882xx_hal_monitor_time", 0, 0, 100000, 0,
+		aw882xx_hal_get_monitor_time, aw882xx_hal_set_monitor_time),
+
 };
 
 static struct snd_kcontrol_new aw882xx_spin_control[] = {

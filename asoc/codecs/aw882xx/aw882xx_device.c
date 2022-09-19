@@ -35,6 +35,16 @@ static LIST_HEAD(g_dev_list);
 static DEFINE_MUTEX(g_dev_lock);
 
 /*********************************awinic acf*************************************/
+void aw882xx_dev_monitor_hal_get_time(struct aw_device *aw_dev, uint32_t *time)
+{
+	aw882xx_monitor_hal_get_time(&aw_dev->monitor_desc, time);
+}
+
+void aw882xx_dev_monitor_hal_work(struct aw_device *aw_dev, uint32_t *vmax)
+{
+	aw882xx_monitor_hal_work(&aw_dev->monitor_desc, vmax);
+}
+
 static void aw_dev_reg_dump(struct aw_device *aw_dev)
 {
 	int reg_num = aw_dev->ops.aw_get_reg_num();

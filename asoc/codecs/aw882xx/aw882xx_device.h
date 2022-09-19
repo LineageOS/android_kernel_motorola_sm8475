@@ -356,5 +356,8 @@ int aw882xx_dev_set_volume(struct aw_device *aw_dev, unsigned int set_vol);
 int aw882xx_dev_get_volume(struct aw_device *aw_dev, unsigned int *get_vol);
 void aw882xx_dev_mute(struct aw_device *aw_dev, bool mute);
 
+void aw882xx_dev_monitor_hal_get_time(struct aw_device *aw_dev, uint32_t *time);
+void aw882xx_dev_monitor_hal_work(struct aw_device *aw_dev, uint32_t *vmax);
+
 #endif
 

@@ -60,25 +60,23 @@ static DEFINE_MUTEX(g_cali_lock);
 
 static void aw_fs_read(struct file *file, char *buf, size_t count, loff_t *pos)
 {
+#if 0 //kernel-5.10, GKI not allow kernel_read, read cali value in pal
 #ifdef AW_KERNEL_VER_OVER_5_4_0
-/*
-#MMI_STOPSHIP: gki issue, will find another method late
 	kernel_read(file, buf, count, pos);
-*/
 #else
 	vfs_read(file, buf, count, pos);
+#endif
 #endif
 }
 
 static void aw_fs_write(struct file *file, char *buf, size_t count, loff_t *pos)
 {
+#if 0 //kernel-5.10, GKI not allow kernel_write, read cali value in pal
 #ifdef AW_KERNEL_VER_OVER_5_4_0
-/*
-#MMI_STOPSHIP: gki issue, will find another method late
 	kernel_write(file, buf, count, pos);
-*/
 #else
 	vfs_write(file, buf, count, pos);
+#endif
 #endif
 }
 
