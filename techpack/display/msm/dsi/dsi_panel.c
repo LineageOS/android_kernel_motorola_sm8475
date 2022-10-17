@@ -2862,12 +2862,25 @@ static int dsi_panel_parse_dsc_params(struct dsi_display_mode *mode,
 	priv_info->dsc.config.slice_count = DIV_ROUND_UP(intf_width,
 		priv_info->dsc.config.slice_width);
 
-	rc = sde_dsc_populate_dsc_config(&priv_info->dsc.config,
-			priv_info->dsc.scr_rev);
-	if (rc) {
-		DSI_DEBUG("failed populating dsc params\n");
-		rc = -EINVAL;
-		goto error;
+	priv_info->dsc.dsc_novatek_ic = utils->read_bool(utils->data,
+		"qcom,mdss-dsc-novateck-ic");
+	if (priv_info->dsc.dsc_novatek_ic) {
+		rc = sde_dsc_populate_dsc_config_nt(&priv_info->dsc.config,
+				priv_info->dsc.scr_rev);
+		if (rc) {
+			DSI_DEBUG("failed populating dsc params(nt)\n");
+			rc = -EINVAL;
+			goto error;
+		}
+
+	} else {
+		rc = sde_dsc_populate_dsc_config(&priv_info->dsc.config,
+				priv_info->dsc.scr_rev);
+		if (rc) {
+			DSI_DEBUG("failed populating dsc params\n");
+			rc = -EINVAL;
+			goto error;
+		}
 	}
 
 	rc = sde_dsc_populate_dsc_private_params(&priv_info->dsc, intf_width);
