@@ -112,7 +112,7 @@ static struct wcd_mbhc_config wcd_mbhc_cfg = {
 	.key_code[5] = 0,
 	.key_code[6] = 0,
 	.key_code[7] = 0,
-	.linein_th = 5000,
+	.linein_th = 4000,
 	.moisture_en = false,
 	.mbhc_micbias = MIC_BIAS_2,
 	.anc_micbias = MIC_BIAS_2,
@@ -972,7 +972,7 @@ static struct snd_soc_dai_link msm_mi2s_dai_links[] = {
 			SND_SOC_DPCM_TRIGGER_POST},
 		.ops = &msm_common_be_ops,
 		.ignore_suspend = 1,
-		SND_SOC_DAILINK_REG(quin_mi2s_rx_aw882xx),
+		SND_SOC_DAILINK_REG(quin_mi2s_tx_aw882xx),
 	},
 	{
 		.name = LPASS_BE_SEN_MI2S_RX,
