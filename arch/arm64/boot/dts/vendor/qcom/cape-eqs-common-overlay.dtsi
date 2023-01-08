@@ -26,6 +26,8 @@
 #include "cape-eqs-charger-overlay.dtsi"
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include "cape-eqs-haptics-overlay.dtsi"
+#include "display/display/cape-sde-display-eqs-common.dtsi"
+#include "camera/cape-camera-sensor-eqs-common-dvt1a.dtsi"
 
 &tlmm {
 	redriver_enable: redriver_enable {
