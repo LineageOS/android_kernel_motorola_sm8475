@@ -1,0 +1,16 @@
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/qcom,gcc-waipio.h>
+#include <dt-bindings/clock/qcom,camcc-waipio.h>
+#include <dt-bindings/interconnect/qcom,waipio.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
+
+#include "cape-camera-sensor-eqs-common-dvt1a.dtsi"
+/ {
+	model = "eqs";
+	compatible = "qcom,cape", "qcom,capep", "moto,eqs";
+	qcom,msm-id = <530 0x10000>, <531 0x10000>, <540 0x10000>;
+	qcom,board-id = <0x41 0xB1B1>, <0x41 0xB2A1>, <0x41 0xB2B1>, <0x41 0xB2B3>, <0x41 0xC1A0>;
+};
