@@ -1,0 +1,128 @@
+/* Copyright (c) 2022, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/*
+   This base is original from "cape-mtp-pm8010-overlay.dts"
+*/
+#include "cape-moto-common-overlay-base.dtsi"
+#include "cape-moto-common-overlay.dtsi"
+#include "waipio-moto-common-charger.dtsi"
+#include "cape-oneli-evt1-sensor-overlay.dtsi"
+#include "cape-oneli-fingerprint.dtsi"
+#include "waipio-li-charger-overlay.dtsi"
+#include "cape-felix-touchscreen-overlay.dtsi"
+#include "cape-oneli-thermal-overlay.dtsi"
+#include "cape-oneli-haptics-overlay.dtsi"
+#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
+
+&tlmm {
+	redriver_enable: redriver_enable {
+		mux {
+			pins = "gpio19";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio19";
+			drive-strength = <2>;
+			bias-disable; /* NO PULL */
+			output-high;
+		};
+	};
+	redriver_disable: redriver_disable {
+		mux {
+			pins = "gpio19";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio19";
+			drive-strength = <2>;
+			output-low;
+		};
+	};
+};
+
+&apps_rsc {
+	rpmh-regulator-ldoc11 {
+		compatible = "qcom,rpmh-vrm-regulator";
+		qcom,resource-name = "ldoc11";
+		qcom,regulator-type = "pmic5-ldo";
+		qcom,supported-modes =
+			<RPMH_REGULATOR_MODE_LPM
+			RPMH_REGULATOR_MODE_HPM>;
+		qcom,mode-threshold-currents = <0 10000>;
+		L11C:
+		pm8350c_l11: regulator-pm8350c-l11 {
+			regulator-name = "pm8350c_l11";
+			qcom,set = <RPMH_REGULATOR_SET_ALL>;
+			regulator-min-microvolt = <3000000>;
+			regulator-max-microvolt = <3000000>;
+			qcom,init-voltage = <3000000>;
+			qcom,init-mode = <RPMH_REGULATOR_MODE_HPM>;
+		};
+	};
+};
+
+&L8C {
+	regulator-boot-on;
+};
+
+&qupv3_se18_i2c {
+	status = "ok";
+	#include "cape-moto-common-redriver.dtsi"
+};
+
+&redriver {
+	status = "ok";
+	vio-supply = <&L8C>;
+};
+
+&usb0 {
+	ssusb_redriver = <&redriver>;
+};
+
+&qupv3_se9_i2c {
+        status = "ok";
+        qcom,clk-freq-out = <1000000>;
+        #address-cells = <1>;
+        #size-cells = <0>;
+        nq@28 {
+                compatible = "qcom,sn-nci";
+                reg = <0x28>;
+                qcom,sn-irq = <&tlmm 46 0x00>;
+                qcom,sn-ven = <&tlmm 34 0x00>;
+                qcom,sn-firm = <&tlmm 45 0x00>;
+                qcom,sn-clkreq = <&tlmm 35 0x00>;
+                qcom,sn-vdd-1p8-supply = <&S10B>;
+                qcom,sn-vdd-1p8-voltage = <1800000 1800000>;
+                qcom,sn-vdd-1p8-current = <157000>;
+                interrupt-parent = <&tlmm>;
+                interrupts = <46 0>;
+                interrupt-names = "nfc_irq";
+                pinctrl-names = "nfc_active", "nfc_suspend";
+                pinctrl-0 = <&nfc_int_active &nfc_enable_active>;
+                pinctrl-1 = <&nfc_int_suspend &nfc_enable_suspend>;
+        };
+};
+
+&pmk8350 {
+	pon_hlos@1300 {
+		resin {
+			mmi,key-swap-code = <KEY_VOLUMEUP>;
+		};
+	};
+};
+
+&sdhc_2 {
+	status = "disabled";
+};

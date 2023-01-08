@@ -1,0 +1,422 @@
+/* Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/*
+   This base is original from "waipio-mtp-pm8008-overlay.dts"
+*/
+#include "waipio-moto-common-overlay-base.dtsi"
+#include "waipio-moto-common-overlay.dtsi"
+#include "waipio-moto-common-charger.dtsi"
+#include "waipio-ironmn-thermal-overlay.dtsi"
+#include <dt-bindings/usb/pd.h>
+
+&qupv3_se5_i2c {
+        status = "disable";
+};
+
+&qupv3_se15_i2c {
+	status = "ok";
+
+	redriver: redriver@1A {
+		compatible = "onnn,redriver";
+		reg = <0x1A>;
+		vcc-supply = <&S10B>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&redriver_enable>;
+		redriver,orientation_gpio = <&tlmm 198 0>;
+		init-none;
+
+		eq = /bits/ 8 <
+			/* Parameters for USB */
+			0x4 0x4 0x4 0x4
+			/* Parameters for DP */
+			0x6 0x4 0x4 0x6>;
+		flat-gain = /bits/ 8 <
+			/* Parameters for USB */
+			0x3 0x1 0x1 0x3
+			/* Parameters for DP */
+			0x2 0x1 0x1 0x2>;
+		output-comp = /bits/ 8 <
+			/* Parameters for USB */
+			0x3 0x3 0x3 0x3
+			/* Parameters for DP */
+			0x3 0x3 0x3 0x3>;
+		loss-match = /bits/ 8 <
+			/* Parameters for USB */
+			0x1 0x3 0x3 0x1
+			/* Parameters for DP */
+			0x3 0x3 0x3 0x3>;
+	};
+
+	fusb0: typec-portc@22 {
+		compatible = "fcs,fusb302";
+		reg = <0x22>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <85 IRQ_TYPE_LEVEL_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&fusb0_int>;
+		fusb302,orientation_gpio = <&tlmm 198 0>;
+		vdd-supply = <&BOB>;
+		vbus-supply = <&ext5v>;
+		status = "ok";
+		connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+			data-role = "dual";
+			power-role = "dual";
+			try-power-role = "sink";
+			source-pdos = <PDO_FIXED(5000, 1500, (PDO_FIXED_USB_COMM | PDO_FIXED_DUAL_ROLE | PDO_FIXED_DATA_SWAP))>;
+			sink-pdos = <PDO_FIXED(5000, 1500, (PDO_FIXED_USB_COMM | PDO_FIXED_DUAL_ROLE | PDO_FIXED_DATA_SWAP))>;
+			op-sink-microwatt = <7500000>;
+			mode-switch = <&typec_mux>;
+
+			port {
+				fusb302_port: endpoint {
+					remote-endpoint = <&dwc3_role_switch>;
+				};
+			};
+		};
+	};
+
+	pct1812_mmi@33 {
+		compatible = "pixart,pct1812_ts";
+		reg = <0x33>;
+		/*pct1812,reset-gpio = <&tlmm 20 0>;*/
+		pct1812,irq-gpio = <&tlmm 84 0x2008>;
+		pct1812,regulator_vdd = "pm8350c_l3";
+		pct1812,regulator_vio = "pm8350_s10";
+		pinctrl-names = "touchpad_active", "touchpad_suspend";
+		pinctrl-0 = <&tpad_int_active>;
+		pinctrl-1 = <&tpad_int_active>;
+		pct1812-custom-config {
+			scroll-min-distance = <2>;
+			max-coords = <1280 768>;
+			flip-y;
+			ty-offset = <200>;
+		};
+	};
+};
+
+&usb0 {
+	port {
+		dwc3_role_switch: endpoint@1 {
+			reg = <1>;
+			remote-endpoint = <&fusb302_port>;
+		};
+	};
+};
+
+/* enable gpio58 as qup18 L4 to connect receiver spi cs*/
+&qupv3_se18_spi_pins {
+	qupv3_se18_spi_active: qupv3_se18_spi_active {
+		mux {
+			pins = "gpio68", "gpio69",
+					"gpio70";
+			function = "qup18";
+		};
+
+		config {
+			pins = "gpio68", "gpio69",
+					"gpio70";
+			drive-strength = <6>;
+			bias-disable;
+		};
+	};
+
+	qupv3_se18_spi_sleep: qupv3_se18_spi_sleep {
+		mux {
+			pins = "gpio68", "gpio69",
+					"gpio70";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio68", "gpio69",
+					"gpio70";
+			drive-strength = <6>;
+			bias-disable;
+		};
+	};
+
+	qupv3_se18_spi_cs0_active: qupv3_se18_spi_cs0_active {
+		mux {
+			pins = "gpio71";
+			function = "qup18";
+		};
+
+		config {
+			pins = "gpio71";
+			drive-strength = <6>;
+			bias-disable;
+		};
+	};
+
+	qupv3_se18_spi_cs0_sleep: qupv3_se18_spi_cs0_sleep {
+		mux {
+			pins = "gpio71";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio71";
+			drive-strength = <6>;
+			bias-pull-up;
+		};
+	};
+
+	qupv3_se18_spi_cs1_active: qupv3_se18_spi_cs1_active {
+		mux {
+			pins = "gpio58";
+			function = "qup_l4";
+		};
+
+		config {
+			pins = "gpio58";
+			drive-strength = <6>;
+			bias-disable;
+		};
+	};
+
+	qupv3_se18_spi_cs1_sleep: qupv3_se18_spi_cs1_sleep {
+		mux {
+			pins = "gpio58";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio58";
+			drive-strength = <6>;
+			bias-pull-up;
+		};
+	};
+};
+
+&qupv3_se18_spi {
+	status = "ok";
+	pinctrl-0 = <&qupv3_se18_spi_active &qupv3_se18_spi_cs0_active &qupv3_se18_spi_cs1_active>;
+	pinctrl-1 = <&qupv3_se18_spi_sleep &qupv3_se18_spi_cs0_sleep &qupv3_se18_spi_cs1_sleep>;
+
+	sr100@0 {
+		compatible = "nxp,sr100";
+		reg = <0>;
+		nxp,sr100-irq = <&tlmm 66 0x00>;
+		nxp,sr100-ce = <&tlmm 54 0x00>;
+		nxp,sr100-ri = <&tlmm 65 0x00>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <66 0>;
+		spi-max-frequency = <20000000>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&uwb_irq>;
+	};
+};
+
+&usb0 {
+	ssusb_redriver = <&redriver>;
+};
+
+&redriver {
+	status = "ok";
+};
+
+&pm8350c_rgb {
+	red {
+	        label = "charging";
+                linux,default-trigger = "battery-charging-blink-full-solid";
+	};
+
+	green {
+	        status = "disabled";
+	};
+
+	blue {
+	        status = "disabled";
+	};
+};
+
+&tlmm {
+	uwb_irq: uwb_irq {
+		mux {
+			pins = "gpio66";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio66";
+			bias-pull-down;
+		};
+	};
+
+	redriver_enable: redriver_enable {
+		mux {
+			pins = "gpio109";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio109";
+			drive-strength = <2>;
+			bias-disable; /* NO PULL */
+			output-high;
+		};
+	};
+
+	redriver_disable: redriver_disable {
+		mux {
+			pins = "gpio109";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio109";
+			drive-strength = <2>;
+			output-low;
+		};
+	};
+
+	flip_balance_en_n: flip-balance-en-n {
+		mux {
+			pins = "gpio105";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio105";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	flip_battplus_dis: flip-battplus-dis {
+		mux {
+			pins = "gpio90";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio90";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	fusb0_int: fusb0-int {
+		mux {
+			pins = "gpio85";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio85";
+			drive-strength = <2>;
+			bias-pull-up;
+		};
+	};
+
+	tpad_int_active: tpad-int-active {
+		mux {
+			pins = "gpio84";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio84";
+			drive-strength = <8>;
+			bias-pull-up;
+		};
+	};
+
+	vbus_ocp_fault_n: vbus-ocp-fault-n {
+		mux {
+			pins = "gpio2";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio2";
+			bias-pull-up;
+		};
+	};
+};
+
+&pmk8350_vadc {
+	pm8350b_vbatt2_sns {
+		reg = <PM8350B_ADC7_GPIO3_DIV3>;
+		label = "pm8350b_vbatt2_sns";
+		qcom,pre-scaling = <1 1>;
+	};
+};
+
+&pm8350b_gpios {
+	chrg_fullcurr_en {
+		chrg_fullcurr_en_default: chrg_fullcurr_en_default {
+			pins = "gpio8";
+			function = "normal";
+			output-high;
+			input-disable;
+			bias-disable;
+			power-source = <0>;       /* 1.8V */
+			qcom,drive-strength = <2>;
+		};
+	};
+};
+
+&soc {
+	flip_fet_control {
+		compatible = "mmi,fet-control";
+		pinctrl-names = "default";
+		pinctrl-0 = <&flip_battplus_dis &flip_balance_en_n &chrg_fullcurr_en_default &vbus_ocp_fault_n>;
+		io-channels = <&pmk8350_vadc PM8350B_ADC7_GPIO3_DIV3>;	//mapping to the channel define
+		io-channel-names = "pm8350b_vbatt2_sns"; 				//channel name-  pm8350b_vbatt2_sns
+		mmi,main-batt-psy = "battery";
+		mmi,flip-batt-psy = "flip_battery";
+		mmi,flip_battplus_en_gpio = <&tlmm 90 0>;
+		mmi,flip_balance_en_n_gpio = <&tlmm 105 0>;
+		mmi,vbus-ocp-fault-n-gpio = <&tlmm 2 0>;
+		mmi,chrg-fullcurr-en-gpio = <&pm8350b_gpios 8 GPIO_ACTIVE_HIGH>;
+	};
+
+	ext5v_en: regulator-gpio-ext5v-en {
+		compatible = "regulator-fixed";
+		regulator-name = "ext5v_en";
+		enable-active-high;
+		startup-delay-us = <100000>;
+		gpio = <&tlmm 51 GPIO_ACTIVE_HIGH>;
+	};
+
+	ext5v: regulator-gpio-ext5v {
+		compatible = "regulator-fixed";
+		regulator-name = "ext5v";
+		enable-active-high;
+		startup-delay-us = <100000>;
+		gpio = <&tlmm 103 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&ext5v_en>;
+	};
+
+	typec_mux: redriver-typec-mux {
+		compatible = "onsemi,redriver-typec-mux";
+		status = "ok";
+	};
+};
+
+&qti_glink_charger {
+	mmi,max-fv-mv = <4490>;
+	mmi,max-fcc-ma = <3000>;
+	mmi,demo-fv-mv = <3000>;
+	mmi,mmi-temp-zones =
+			<0 4200 970 0>,
+			<10 4200 2424 970>,
+			<15 4480 2424 2424>,
+			<45 4480 3000 3000>,
+			<60 4200 3000 0>;
+};
