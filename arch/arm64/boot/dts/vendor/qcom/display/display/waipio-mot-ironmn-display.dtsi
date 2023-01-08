@@ -1,0 +1,94 @@
+/*
+   this is original from waipio-sde-display-hiphi-common-base.dtsi
+*/
+#include <dt-bindings/clock/qcom,gcc-waipio.h>
+#include <dt-bindings/clock/qcom,rpmh.h>
+#include "waipio-sde-display-pinctrl.dtsi"
+#include <dt-bindings/clock/qcom,dispcc-waipio.h>
+#include "dsi-panel-mot-dummy-qhd-video.dtsi"
+
+&soc {
+	sde_dsi: qcom,dsi-display-primary {
+		compatible = "qcom,dsi-display";
+		label = "primary";
+
+		qcom,dsi-ctrl = <&mdss_dsi0>;
+		qcom,dsi-phy = <&mdss_dsi_phy0>;
+
+		qcom,mdp = <&mdss_mdp>;
+
+		clocks = <&mdss_dsi_phy0 0>,
+				<&mdss_dsi_phy0 1>,
+			 <&clock_dispcc DISP_CC_MDSS_MDP_CLK>;
+		clock-names = "pll_byte_clk0", "pll_dsi_clk0",
+			"mdp_core_clk";
+
+		pinctrl-names = "panel_active", "panel_suspend";
+		pinctrl-0 = <&sde_dsi_active &sde_te_active>;
+		pinctrl-1 = <&sde_dsi_suspend &sde_te_suspend>;
+
+		qcom,platform-te-gpio = <&tlmm 86 0>;
+		qcom,panel-te-source = <0>;
+
+		qcom,dsi-default-panel = <&mot_dummy_vid_qhd>;
+
+	};
+
+	sde_wb: qcom,wb-display@0 {
+		compatible = "qcom,wb-display";
+		cell-index = <0>;
+		label = "wb_display";
+	};
+
+	disp_rdump_memory: disp_rdump_region@e1000000 {
+		reg = <0xb8000000 0x00800000>;
+		label = "disp_rdump_region";
+	};
+
+};
+
+&reserved_memory {
+	splash_memory: splash_region {
+		reg = <0x0 0xb8000000 0x0 0x02b00000>;
+		label = "cont_splash_region";
+	};
+};
+
+&mdss_mdp {
+	connectors = <&sde_dsi &smmu_sde_unsec &smmu_sde_sec &sde_wb &sde_dp &sde_rscc>;
+	delete-cooling-cells;
+};
+
+&mot_dummy_vid_qhd {
+	qcom,platform-reset-gpio = <&tlmm 0 0>;
+
+	qcom,dsi-select-clocks = "pll_byte_clk0", "pll_dsi_clk0";
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,display-topology = <1 0 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&sde_dp {
+	#clock-cells = <1>;
+	clocks =  <&clock_dispcc DISP_CC_MDSS_DPTX0_AUX_CLK>,
+		<&clock_rpmh RPMH_CXO_CLK>,
+		<&clock_gcc GCC_USB3_0_CLKREF_EN>,
+		<&clock_gcc GCC_USB3_PRIM_PHY_PIPE_CLK>,
+		<&clock_dispcc DISP_CC_MDSS_DPTX0_LINK_CLK>,
+		<&clock_dispcc DISP_CC_MDSS_DPTX0_LINK_CLK_SRC>,
+		<&clock_dispcc DISP_CC_MDSS_DPTX0_LINK_INTF_CLK>,
+		<&clock_dispcc DISP_CC_MDSS_DPTX0_PIXEL0_CLK_SRC>,
+		<&sde_dp 1>,
+		<&clock_dispcc DISP_CC_MDSS_DPTX0_PIXEL1_CLK_SRC>,
+		<&clock_dispcc DISP_CC_MDSS_DPTX0_PIXEL0_CLK>,
+		<&clock_dispcc DISP_CC_MDSS_DPTX0_PIXEL1_CLK>;
+	clock-names = "core_aux_clk", "rpmh_cxo_clk", "core_usb_ref_clk_src",
+		"core_usb_pipe_clk", "link_clk", "link_clk_src", "link_iface_clk",
+		"pixel_clk_rcg", "pixel_parent", "pixel1_clk_rcg",
+		"strm0_pixel_clk", "strm1_pixel_clk";
+	clock-mmrm = <0 0 0 0 0 DISP_CC_MDSS_DPTX0_LINK_CLK_SRC 0 0 0 0 0 0>;
+	altmode-typec-bridge;
+};

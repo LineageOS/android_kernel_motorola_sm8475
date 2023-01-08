@@ -1,0 +1,50 @@
+/dts-v1/;
+/plugin/;
+
+#include "cape-sde-display-oneli-common.dtsi"
+
+&sde_te1_active {
+	mux {
+		pins = "gpio124";
+		function = "mdp_vsync";
+	};
+
+	config {
+		pins = "gpio124";
+		drive-strength = <2>;   /* 2 mA */
+		bias-pull-down;         /* PULL DOWN */
+	};
+};
+
+&sde_te1_suspend {
+	mux {
+		pins = "gpio124";
+		function = "mdp_vsync";
+	};
+
+	config {
+		pins = "gpio124";
+		drive-strength = <2>;   /* 2 mA */
+		bias-pull-down;         /* PULL DOWN */
+	};
+};
+
+&sde_dsi {
+	vci-supply = <&L13C>;
+};
+
+&sde_dsi1 {
+	qcom,platform-te-gpio = <&tlmm 124 0>;
+};
+
+&mot_boe_269_800x600_cmd {
+	qcom,mdss-dsi-te-using-wd;
+};
+
+
+/ {
+	model = "oneli";
+	compatible = "qcom,cape-mtp", "qcom,cape", "qcom,mtp", "moto,oneli";
+	qcom,msm-id = <530 0x10000>, <531 0x10000>, <540 0x10000>;
+	qcom,board-id = <0x45 0xA100>;
+};

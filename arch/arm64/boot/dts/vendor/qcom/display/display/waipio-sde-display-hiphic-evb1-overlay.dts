@@ -1,0 +1,11 @@
+/dts-v1/;
+/plugin/;
+
+#include "waipio-sde-display-hiphi-common.dtsi"
+
+/ {
+	model = "hiphic";
+	compatible = "qcom,waipio-mtp", "qcom,waipio", "qcom,mtp", "moto,hiphic";
+	qcom,msm-id = <457 0x10000>, <482 0x10000>, <457 0x20000>, <482 0x20000>;
+	qcom,board-id = <0x45 0x9100>, <0x45 0xA100>, <0x45 0xB100>, <0x45 0xB2A0>, <0x45 0xC1D0>;
+};
