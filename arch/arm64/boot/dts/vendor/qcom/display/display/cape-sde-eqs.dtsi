@@ -1,0 +1,6 @@
+#include "cape-sde.dtsi"
+
+/* Can not do delete-property in overlay dtsi, have to add cap-sde-eqs file */
+&sde_dp {
+	/delete-property/ qcom,mst-enable;
+};
