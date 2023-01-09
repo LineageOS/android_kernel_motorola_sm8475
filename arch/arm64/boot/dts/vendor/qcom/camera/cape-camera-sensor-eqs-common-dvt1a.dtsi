@@ -66,6 +66,15 @@
 &soc {
 	mot,cam-actuator {
 		compatible = "mot,actuator";
+		clock-cntl-level = "nominal";
+		clock-names = "cam_clk";
+		clock-rates = <19200000>;
+		clocks = <&clock_camcc CAM_CC_MCLK2_CLK>;
+		pinctrl-0 = <&cam_sensor_mclk2_active>;
+		pinctrl-1 = <&cam_sensor_mclk2_suspend>;
+		pinctrl-names = "cam_default", "cam_suspend";
+		use-shared-clk = "true";
+		gpio-no-mux = <0x0>;
 		status = "ok";
 	};
 
