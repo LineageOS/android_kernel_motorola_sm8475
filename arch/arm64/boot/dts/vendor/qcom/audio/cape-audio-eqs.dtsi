@@ -1,0 +1,88 @@
+#include "waipio-audio-overlay.dtsi"
+
+&wcd938x_codec {
+	status = "disabled";
+};
+
+&wcd938x_tx_slave {
+	status = "disabled";
+};
+
+&wcd938x_rst_gpio {
+	status = "disabled";
+};
+
+&wsa2_spkr_en1 {
+	status = "disabled";
+};
+
+&fsa4480 {
+	status = "disabled";
+};
+
+&spkr_2_sd_n_sleep {
+	mux {
+		pins = "gpio87";
+	};
+
+	config {
+		pins = "gpio87";
+	};
+};
+
+&spkr_2_sd_n_active {
+	mux {
+		pins = "gpio87";
+	};
+
+	config {
+		pins = "gpio87";
+	};
+};
+
+&waipio_snd {
+	qcom,msm-mi2s-master = <0>, <0>, <0>, <0>, <0>, <0>;
+	qcom,mi2s-audio-intf = <0>;
+	qcom,wcd-disabled = <1>;
+	qcom,cdc-static-supplies = "cdc-vdd-dmic1";
+	qcom,cdc-vdd-dmic1-current = <30000>;
+	qcom,cdc-vdd-dmic1-voltage = <1800000 1800000>;
+	cdc-vdd-dmic1-supply = <&L6C>;
+
+	asoc-codec  = <&stub_codec>, <&lpass_cdc>,
+		      <&swr_haptics>,
+		      <&wsa883x_0221>, <&wsa883x_0222>;
+	asoc-codec-names = "msm-stub-codec.1", "lpass-cdc",
+			   "swr-haptics",
+			   "wsa-codec1", "wsa-codec2";
+
+	qcom,audio-routing =
+		"TX DMIC0", "Digital Mic0",
+		"TX DMIC1", "Digital Mic1",
+		"TX DMIC2", "Digital Mic2",
+		"TX DMIC3", "Digital Mic3",
+		"TX DMIC4", "Digital Mic4",
+		"TX DMIC5", "Digital Mic5",
+		"TX DMIC6", "Digital Mic6",
+		"TX DMIC7", "Digital Mic7",
+		"WSA SRC0_INP", "SRC0",
+		"HAP_IN", "PCM_OUT",
+		"WSA_TX DEC0_INP", "TX DEC0 MUX",
+		"WSA_TX DEC1_INP", "TX DEC1 MUX",
+		"RX_TX DEC0_INP", "TX DEC0 MUX",
+		"RX_TX DEC1_INP", "TX DEC1 MUX",
+		"RX_TX DEC2_INP", "TX DEC2 MUX",
+		"RX_TX DEC3_INP", "TX DEC3 MUX",
+		"VA SWR_INPUT", "VA_SWR_CLK",
+		"VA_AIF1 CAP", "VA_SWR_CLK",
+		"VA_AIF2 CAP", "VA_SWR_CLK",
+		"VA_AIF3 CAP", "VA_SWR_CLK",
+		"VA DMIC0", "Digital Mic0",
+		"VA DMIC1", "Digital Mic1",
+		"VA DMIC2", "Digital Mic2",
+		"VA DMIC3", "Digital Mic3",
+		"VA DMIC4", "Digital Mic4",
+		"VA DMIC5", "Digital Mic5",
+		"VA DMIC6", "Digital Mic6",
+		"VA DMIC7", "Digital Mic7";
+};
