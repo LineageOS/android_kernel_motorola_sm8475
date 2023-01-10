@@ -489,7 +489,7 @@ int mot_actuator_get_bootarg(char *key, char **value)
 	if (n == NULL)
 		goto err;
 
-	if (of_property_read_string(n, "bootargs", &bootargs_tmp) != 0)
+	if (of_property_read_string(n, "mmi,bootconfig", &bootargs_tmp) != 0)
 		goto putnode;
 
 	bootargs_tmp_len = strlen(bootargs_tmp);
