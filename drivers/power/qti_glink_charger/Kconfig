@@ -1,0 +1,2 @@
+config WIRELESS_CPS4035B
+	bool "Wireless CPS4035B"
