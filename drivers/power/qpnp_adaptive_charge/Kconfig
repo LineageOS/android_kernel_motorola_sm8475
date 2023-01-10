@@ -1,0 +1,2 @@
+config ADAPTIVE_TOLERANCE_OPTIMIZATION
+	bool "Adaptive tolerance optimization"
