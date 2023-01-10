@@ -2,6 +2,7 @@
 EXTRA_CFLAGS += -Wall
 EXTRA_CFLAGS += -I$(ANDROID_BUILD_TOP)/motorola/kernel/modules/include
 EXTRA_CFLAGS += -I$(ANDROID_BUILD_TOP)/motorola/kernel/modules/drivers/power/mmi_charger
+EXTRA_CFLAGS += -I$(srctree)/drivers/power/mmi_charger
 
 ifneq ($(filter m y,$(CONFIG_WIRELESS_CPS4035B)),)
 	EXTRA_CFLAGS += -DWIRELESS_CPS4035B
