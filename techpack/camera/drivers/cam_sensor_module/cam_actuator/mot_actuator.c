@@ -64,6 +64,8 @@ typedef enum {
 	MOT_DEVICE_CORFUQ,
 	MOT_DEVICE_CORFUR,
 	MOT_DEVICE_RHODEC,
+	MOT_DEVICE_ONELI,
+	MOT_DEVICE_EQS,
 	MOT_DEVICE_NUM,
 } mot_dev_type;
 
@@ -468,6 +470,41 @@ static const mot_dev_info mot_dev_list[MOT_DEVICE_NUM] = {
 									{50, 30},
 						},
 				},
+			},
+		},
+	},
+
+	{
+		.dev_type = MOT_DEVICE_ONELI,
+		.actuator_num = 1,
+		.dev_name = "oneli",
+		.actuator_info = {
+			[0] = {
+				.actuator_type = MOT_ACTUATOR_GT9767,
+				.dac_pos = 400,
+				.cci_addr = 0x0c,
+				.cci_dev = 0x02,
+				.cci_master = 0x1,
+				.regulator_list = {"ldo7", "ldo4"},
+				.regulator_volt_uv = {1800000, 2800000},
+				.park_lens_needed = true,
+			},
+		},
+	},
+
+	{
+		.dev_type = MOT_DEVICE_EQS,
+		.actuator_num = 1,
+		.dev_name = "eqs",
+		.actuator_info = {
+			[0] = {
+				.actuator_type = MOT_ACTUATOR_GT9772,
+				.dac_pos = 36608,
+				.cci_addr = 0x0c,
+				.cci_dev = 0x00,
+				.cci_master = 0x0,
+				.regulator_list = {"ldo7", "ldo5"},
+				.regulator_volt_uv = {3104000, 1800000},
 			},
 		},
 	},
