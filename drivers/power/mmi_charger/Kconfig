@@ -1,0 +1,5 @@
+config USE_MMI_CHARGER
+	bool "Use MMI Charger"
+
+config MMI_RECHARGER_HAWAO_MODE
+	bool "MMI Recharger HAWAO Mode"
