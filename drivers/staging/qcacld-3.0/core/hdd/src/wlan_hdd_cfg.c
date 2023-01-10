@@ -94,7 +94,7 @@ QDF_STATUS hdd_update_mac_serial(struct hdd_context *hdd_ctx)
         hdd_err("%s: get chosen node read failed \n", __func__);
         goto config_exit;
     } else {
-        cmd_line = of_get_property(chosen_node, "bootargs", &len);
+        cmd_line = of_get_property(chosen_node, "mmi,bootconfig", &len);
         if (!cmd_line || len <= 0) {
             hdd_err("%s: get the barcode bootargs failed \n", __func__);
             qdf_status = QDF_STATUS_E_FAILURE;
