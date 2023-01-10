@@ -1,0 +1,2 @@
+config MMI_RELAY
+	bool "MMI Relay"
