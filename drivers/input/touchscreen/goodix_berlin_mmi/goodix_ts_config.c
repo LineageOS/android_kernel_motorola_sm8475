@@ -13,8 +13,7 @@
 #include "goodix_ts_config.h"
 
 struct goodix_ic_report_rate_config report_rate_config_info = {
-#if defined(PRODUCT_LI) || defined(PRODUCT_ONELI) || defined(PRODUCT_TUNDRA) \
-	||defined(PRODUCT_EQS)
+#if defined(CONFIG_GOODIX_REPORT_RATE_0)
 	.rate_config_count = 2,
 	.refresh_rate_ctrl = 0,
 	.interpolation_ctrl = 1,
@@ -30,7 +29,7 @@ struct goodix_ic_report_rate_config report_rate_config_info = {
 			.command = 0x9D02,
 		},
 	}
-#elif defined(PRODUCT_HIPHIC)
+#elif defined(CONFIG_GOODIX_REPORT_RATE_1)
 	.rate_config_count = 3,
 	.refresh_rate_ctrl = 1,
 	.interpolation_ctrl = 1,
@@ -54,7 +53,7 @@ struct goodix_ic_report_rate_config report_rate_config_info = {
 			.command = 0xC102,
 		},
 	}
-#elif defined(PRODUCT_HIPHI)
+#elif defined(CONFIG_GOODIX_REPORT_RATE_2)
 	.rate_config_count = 2,
 	.refresh_rate_ctrl = 0,
 	.interpolation_ctrl = 1,

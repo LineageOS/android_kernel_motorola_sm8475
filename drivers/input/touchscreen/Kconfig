@@ -1347,4 +1347,6 @@ source "drivers/input/touchscreen/goodix_berlin_driver/Kconfig"
 
 source "drivers/input/touchscreen/touchscreen_mmi/Kconfig"
 
+source "drivers/input/touchscreen/goodix_berlin_mmi/Kconfig"
+
 endif

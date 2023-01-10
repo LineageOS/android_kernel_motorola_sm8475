@@ -1,7 +1,7 @@
 #
 # Goodix touchscreen driver configuration
 #
-menuconfig TOUCHSCREEN_GOODIX_BRL
+menuconfig TOUCHSCREEN_GOODIX_BRL_MMI
 	tristate "Goodix berlin touchscreen"
 	help
 	  Say Y here if you have a Goodix berlin series touch controller
@@ -10,11 +10,47 @@ menuconfig TOUCHSCREEN_GOODIX_BRL
 	  If build module, say M.
 	  If unsure, say N.
 
-if TOUCHSCREEN_GOODIX_BRL
+if TOUCHSCREEN_GOODIX_BRL_MMI
 
-config TOUCHSCREEN_GOODIX_BRL_SPI
+config TOUCHSCREEN_GOODIX_BRL_MMI_SPI
 	bool "support SPI bus connection"
 	help
 		Say Y here if the touchscreen is connected via SPI bus.
+
+config GTP_FOD
+	bool "GTP FOD"
+
+config GTP_LIMIT_USE_SUPPLIER
+	bool "GTP Limit Use Supplier"
+
+config GTP_ENABLE_PM_QOS
+	bool "GTP enable PM QOS"
+
+config GOODIX_ESD_ENABLE
+	bool "Goodix ESD enable"
+
+config GTP_DDA_STYLUS
+	bool "GTP DDA Stylus"
+
+config GOODIX_GESTURES_0X80
+	bool "Goodix gestures 0x80"
+
+choice
+	prompt "Goodix report rate"
+	default GOODIX_REPORT_RATE_NONE
+
+config GOODIX_REPORT_RATE_NONE
+	bool "Goodix report rate none"
+
+config GOODIX_REPORT_RATE_0
+	bool "Goodix report rate 0"
+
+config GOODIX_REPORT_RATE_1
+	bool "Goodix report rate 1"
+
+config GOODIX_REPORT_RATE_2
+	bool "Goodix report rate 2"
+
+endchoice
 
 endif
