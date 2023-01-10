@@ -1,0 +1,2 @@
+config EGIS_PANEL_NOTIFICATIONS
+	bool "Egis Panel Notifications"

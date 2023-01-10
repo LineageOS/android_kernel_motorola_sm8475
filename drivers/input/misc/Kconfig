@@ -904,4 +904,6 @@ config RICHTAP_FOR_PMIC_ENABLE
 	help
 	  Say Y here if your device support AAC RichTap moto device.
 
+source "drivers/input/misc/rbs_fod_mmi/Kconfig"
+
 endif
