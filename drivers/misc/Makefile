@@ -67,3 +67,4 @@ qseecom-mod-$(CONFIG_COMPAT)	+= compat_qseecom.o
 obj-$(CONFIG_WIGIG_SENSING_SPI)	+= wigig_sensing.o
 obj-$(CONFIG_KINECTICS_XR_NORDIC) += kxrctrl/
 obj-y				+= utag/
+obj-y				+= mmi_sys_temp/
