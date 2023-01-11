@@ -306,6 +306,7 @@ struct dsi_panel {
 	char panel_supplier[DSI_PANEL_MAX_PANEL_LEN];
 
 	struct dsi_panel_lhbm_config lhbm_config;
+	bool fod_hbm_enabled;
 };
 
 static inline bool dsi_panel_ulps_feature_enabled(struct dsi_panel *panel)
