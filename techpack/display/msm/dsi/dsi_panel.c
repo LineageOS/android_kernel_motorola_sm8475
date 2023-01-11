@@ -4295,6 +4295,7 @@ int dsi_panel_get_mode(struct dsi_panel *panel,
 			int topology_override)
 {
 	struct device_node *timings_np, *child_np;
+	struct device_node *parent_np;
 	struct dsi_parser_utils *utils;
 	struct dsi_display_mode_priv_info *prv_info;
 	u32 child_idx = 0;
@@ -4309,6 +4310,7 @@ int dsi_panel_get_mode(struct dsi_panel *panel,
 
 	mutex_lock(&panel->panel_lock);
 	utils = &panel->utils;
+	parent_np = utils->data;
 
 	mode->priv_info = kzalloc(sizeof(*mode->priv_info), GFP_KERNEL);
 	if (!mode->priv_info) {
@@ -4387,6 +4389,14 @@ int dsi_panel_get_mode(struct dsi_panel *panel,
 			DSI_ERR("failed to parse panel topology, rc=%d\n", rc);
 			goto parse_fail;
 		}
+
+		utils->data = parent_np;
+		rc = dsi_panel_parse_cmd_sets(prv_info, utils);
+		if (rc) {
+			DSI_ERR("failed to parse panel command sets, rc=%d\n", rc);
+			goto parse_fail;
+		}
+		utils->data = child_np;
 
 		rc = dsi_panel_parse_cmd_sets(prv_info, utils);
 		if (rc) {
