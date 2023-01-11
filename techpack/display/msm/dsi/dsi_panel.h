@@ -210,6 +210,13 @@ struct dsi_panel_spr_info {
 	enum msm_display_spr_pack_type pack_type;
 };
 
+struct dsi_panel_lhbm_config {
+	bool enable;
+	u32 alpha_reg;
+	u32 alpha_size;
+	u32 *alpha;
+};
+
 struct dsi_panel;
 
 struct dsi_panel_ops {
@@ -296,6 +303,8 @@ struct dsi_panel {
 	u32 panel_regDA;
 	char panel_name[DSI_PANEL_MAX_PANEL_LEN];
 	char panel_supplier[DSI_PANEL_MAX_PANEL_LEN];
+
+	struct dsi_panel_lhbm_config lhbm_config;
 };
 
 static inline bool dsi_panel_ulps_feature_enabled(struct dsi_panel *panel)

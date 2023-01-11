@@ -3586,6 +3586,57 @@ error:
 	return rc;
 }
 
+static int dsi_panel_parse_local_hbm_config(struct dsi_panel *panel)
+{
+	struct dsi_panel_lhbm_config *lhbm_config = &panel->lhbm_config;
+	struct dsi_parser_utils *utils = &panel->utils;
+	int rc = 0;
+
+	if (!utils->read_bool(utils->data,
+			      "qcom,mdss-dsi-panel-local-hbm-enabled"))
+		goto err;
+
+	lhbm_config->enable = true;
+
+	rc = utils->read_u32(utils->data,
+			     "qcom,mdss-dsi-panel-local-hbm-alpha-size",
+			     &lhbm_config->alpha_size);
+	if (rc) {
+		DSI_ERR("Unable to read local hbm alpha size, rc=%d\n", rc);
+		goto err;
+	}
+
+	lhbm_config->alpha = kzalloc(lhbm_config->alpha_size *
+				     sizeof(*lhbm_config->alpha), GFP_KERNEL);
+	if (!lhbm_config->alpha) {
+		rc = -ENOMEM;
+		goto err;
+	}
+
+	rc = utils->read_u32_array(utils->data,
+				   "qcom,mdss-dsi-panel-local-hbm-alpha-table",
+				   lhbm_config->alpha,
+				   lhbm_config->alpha_size);
+	if (rc) {
+		DSI_ERR("Unable to read local hbm alpha table, rc=%d\n", rc);
+		goto err;
+	}
+
+	rc = utils->read_u32(utils->data,
+			     "qcom,mdss-dsi-panel-local-hbm-alpha-register",
+			     &lhbm_config->alpha_reg);
+	if (rc) {
+		DSI_ERR("Unable to read local hbm register, rc=%d\n", rc);
+		goto err;
+	}
+
+	return 0;
+
+err:
+	lhbm_config->enable = false;
+	return rc;
+}
+
 static void dsi_panel_update_util(struct dsi_panel *panel,
 				  struct device_node *parser_node)
 {
@@ -3767,6 +3818,10 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	rc = dsi_panel_parse_rgb_led(panel, of_node);
 	if (rc)
 		DSI_DEBUG("failed to get rgb led info, rc=%d\n", rc);
+
+	rc = dsi_panel_parse_local_hbm_config(panel);
+	if (rc)
+		DSI_DEBUG("failed to parse local hbm config, rc=%d\n", rc);
 
 	rc = dsi_panel_vreg_get(panel);
 	if (rc) {
