@@ -2247,7 +2247,7 @@ static int sde_kms_postinit(struct msm_kms *kms)
 	drm_for_each_crtc(crtc, dev)
 		sde_crtc_post_init(dev, crtc);
 
-	return rc;
+	return 0;
 }
 
 static long sde_kms_round_pixclk(struct msm_kms *kms, unsigned long rate,
