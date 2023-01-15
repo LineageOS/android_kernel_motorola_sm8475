@@ -499,9 +499,11 @@ int gen7_hfi_process_queue(struct gen7_gmu_device *gmu,
 		case F2H_MSG_ERR: /* No Reply */
 			adreno_gen7_receive_err_req(gmu, rcvd);
 			break;
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 		case F2H_MSG_DEBUG: /* No Reply */
 			adreno_gen7_receive_debug_req(gmu, rcvd);
 			break;
+#endif
 		default: /* No Reply */
 			dev_err(&gmu->pdev->dev,
 				"HFI request %d not supported\n",

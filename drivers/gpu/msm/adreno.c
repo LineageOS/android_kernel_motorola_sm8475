@@ -3336,7 +3336,9 @@ static const struct kgsl_functable adreno_functable = {
 	.drawctxt_create = adreno_drawctxt_create,
 	.drawctxt_detach = adreno_drawctxt_detach,
 	.drawctxt_destroy = adreno_drawctxt_destroy,
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	.drawctxt_dump = adreno_drawctxt_dump,
+#endif
 	.setproperty = adreno_setproperty,
 	.setproperty_compat = adreno_setproperty_compat,
 	.drawctxt_sched = adreno_drawctxt_sched,

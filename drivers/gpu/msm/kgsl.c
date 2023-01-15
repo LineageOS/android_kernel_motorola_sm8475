@@ -1764,25 +1764,31 @@ long kgsl_ioctl_device_waittimestamp_ctxtid(
 	struct kgsl_device_waittimestamp_ctxtid *param = data;
 	struct kgsl_device *device = dev_priv->device;
 	long result = -EINVAL;
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	unsigned int temp_cur_ts = 0;
+#endif
 	struct kgsl_context *context;
 
 	context = kgsl_context_get_owner(dev_priv, param->context_id);
 	if (context == NULL)
 		return result;
 
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	kgsl_readtimestamp(device, context, KGSL_TIMESTAMP_RETIRED,
 		&temp_cur_ts);
 
 	trace_kgsl_waittimestamp_entry(device, context->id, temp_cur_ts,
 		param->timestamp, param->timeout);
+#endif
 
 	result = device->ftbl->waittimestamp(device, context, param->timestamp,
 		param->timeout);
 
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	kgsl_readtimestamp(device, context, KGSL_TIMESTAMP_RETIRED,
 		&temp_cur_ts);
 	trace_kgsl_waittimestamp_exit(device, temp_cur_ts, result);
+#endif
 
 	kgsl_context_put(context);
 

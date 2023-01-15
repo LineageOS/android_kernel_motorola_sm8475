@@ -70,9 +70,11 @@ struct adreno_context {
 	struct dentry *debug_root;
 	unsigned int queued_timestamp;
 	struct adreno_ringbuffer *rb;
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	unsigned int submitted_timestamp;
 	uint64_t submit_retire_ticks[SUBMIT_RETIRE_TICKS_SIZE];
 	int ticks_index;
+#endif
 
 	struct list_head active_node;
 	unsigned long active_time;
@@ -135,8 +137,10 @@ int adreno_drawctxt_wait(struct adreno_device *adreno_dev,
 void adreno_drawctxt_invalidate(struct kgsl_device *device,
 		struct kgsl_context *context);
 
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 void adreno_drawctxt_dump(struct kgsl_device *device,
 		struct kgsl_context *context);
+#endif
 
 /**
  * adreno_drawctxt_detached - Helper function to check if a context is detached

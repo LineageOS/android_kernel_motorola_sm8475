@@ -8,7 +8,6 @@ msm_kgsl-y = \
 	kgsl_bus.o \
 	kgsl_drawobj.o \
 	kgsl_events.o \
-	kgsl_eventlog.o \
 	kgsl_gmu_core.o \
 	kgsl_ioctl.o \
 	kgsl_mmu.o \
@@ -21,6 +20,8 @@ msm_kgsl-y = \
 	kgsl_trace.o \
 	kgsl_util.o \
 	kgsl_vbo.o
+
+msm_kgsl-$(CONFIG_QCOM_KGSL_DEBUG) += kgsl_eventlog.o
 
 msm_kgsl-$(CONFIG_COMPAT) += kgsl_compat.o
 msm_kgsl-$(CONFIG_DEBUG_FS) += kgsl_debugfs.o

@@ -20,6 +20,15 @@
 #include "kgsl_drawobj.h"
 #include "kgsl_sharedmem.h"
 
+#ifndef CONFIG_QCOM_KGSL_DEBUG
+#undef DEFINE_EVENT
+#undef TRACE_EVENT
+#undef DECLARE_EVENT_CLASS
+#define DEFINE_EVENT DEFINE_EVENT_NOP
+#define TRACE_EVENT TRACE_EVENT_NOP
+#define DECLARE_EVENT_CLASS DECLARE_EVENT_CLASS_NOP
+#endif
+
 #define show_memtype(type) \
 	__print_symbolic(type, \
 		{ KGSL_MEM_ENTRY_KERNEL, "gpumem" }, \

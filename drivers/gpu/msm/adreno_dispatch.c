@@ -216,10 +216,14 @@ void adreno_dispatcher_stop_fault_timer(struct kgsl_device *device)
 static void _retire_timestamp(struct kgsl_drawobj *drawobj)
 {
 	struct kgsl_context *context = drawobj->context;
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	struct adreno_context *drawctxt = ADRENO_CONTEXT(context);
+#endif
 	struct kgsl_device *device = context->device;
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	struct adreno_ringbuffer *rb = drawctxt->rb;
 	struct retire_info info = {0};
+#endif
 
 	/*
 	 * Write the start and end timestamp to the memstore to keep the
@@ -233,15 +237,19 @@ static void _retire_timestamp(struct kgsl_drawobj *drawobj)
 		KGSL_MEMSTORE_OFFSET(context->id, eoptimestamp),
 		drawobj->timestamp);
 
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	drawctxt->submitted_timestamp = drawobj->timestamp;
+#endif
 
 	/* Retire pending GPU events for the object */
 	kgsl_process_event_group(device, &context->events);
 
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	info.inflight = -1;
 	info.rb_id = rb->id;
 	info.wptr = rb->wptr;
 	info.timestamp = drawobj->timestamp;
+#endif
 
 	msm_perf_events_update(MSM_PERF_GFX, MSM_PERF_RETIRED,
 				pid_nr(context->proc_priv->pid),
@@ -251,6 +259,7 @@ static void _retire_timestamp(struct kgsl_drawobj *drawobj)
 	if (drawobj->flags & KGSL_DRAWOBJ_END_OF_FRAME)
 		atomic64_inc(&context->proc_priv->frame_count);
 
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	/*
 	 * For A3xx we still get the rptr from the CP_RB_RPTR instead of
 	 * rptr scratch out address. At this point GPU clocks turned off.
@@ -268,6 +277,7 @@ static void _retire_timestamp(struct kgsl_drawobj *drawobj)
 
 	log_kgsl_cmdbatch_retired_event(context->id, drawobj->timestamp,
 		context->priority, drawobj->flags, 0, 0);
+#endif
 
 	kgsl_drawobj_destroy(drawobj);
 }
@@ -557,11 +567,15 @@ static int sendcmd(struct adreno_device *adreno_dev,
 	struct adreno_context *drawctxt = ADRENO_CONTEXT(drawobj->context);
 	struct kgsl_context *context = drawobj->context;
 	struct adreno_dispatcher_drawqueue *dispatch_q = &drawctxt->rb->dispatch_q;
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	struct adreno_submit_time time;
 	uint64_t secs = 0;
 	unsigned long nsecs = 0;
+#endif
 	int ret;
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	struct submission_info info = {0};
+#endif
 
 	mutex_lock(&device->mutex);
 	if (adreno_gpu_halt(adreno_dev) != 0) {
@@ -569,7 +583,9 @@ static int sendcmd(struct adreno_device *adreno_dev,
 		return -EBUSY;
 	}
 
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	memset(&time, 0x0, sizeof(time));
+#endif
 
 	dispatcher->inflight++;
 	dispatch_q->inflight++;
@@ -596,7 +612,11 @@ static int sendcmd(struct adreno_device *adreno_dev,
 			ADRENO_DRAWOBJ_PROFILE_COUNT;
 	}
 
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	ret = adreno_ringbuffer_submitcmd(adreno_dev, cmdobj, &time);
+#else
+	ret = adreno_ringbuffer_submitcmd(adreno_dev, cmdobj, NULL);
+#endif
 
 	/*
 	 * On the first command, if the submission was successful, then read the
@@ -646,8 +666,10 @@ static int sendcmd(struct adreno_device *adreno_dev,
 		return ret;
 	}
 
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	secs = time.ktime;
 	nsecs = do_div(secs, 1000000000);
+#endif
 
 	/*
 	 * For the first submission in any given command queue update the
@@ -660,27 +682,33 @@ static int sendcmd(struct adreno_device *adreno_dev,
 		dispatch_q->expires = jiffies +
 			msecs_to_jiffies(adreno_drawobj_timeout);
 
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	info.inflight = (int) dispatcher->inflight;
 	info.rb_id = drawctxt->rb->id;
 	info.rptr = adreno_get_rptr(drawctxt->rb);
 	info.wptr = drawctxt->rb->wptr;
 	info.gmu_dispatch_queue = -1;
+#endif
 
 	msm_perf_events_update(MSM_PERF_GFX, MSM_PERF_SUBMIT,
 			       pid_nr(context->proc_priv->pid),
 			       context->id, drawobj->timestamp,
 			       !!(drawobj->flags & KGSL_DRAWOBJ_END_OF_FRAME));
 
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	trace_adreno_cmdbatch_submitted(drawobj, &info,
 			time.ticks, (unsigned long) secs, nsecs / 1000,
 			dispatch_q->inflight);
 
 	log_kgsl_cmdbatch_submitted_event(context->id, drawobj->timestamp,
 		context->priority, drawobj->flags);
+#endif
 
 	mutex_unlock(&device->mutex);
 
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	cmdobj->submit_ticks = time.ticks;
+#endif
 
 	dispatch_q->cmd_q[dispatch_q->tail] = cmdobj;
 	dispatch_q->tail = (dispatch_q->tail + 1) %
@@ -793,7 +821,9 @@ static int dispatcher_context_sendcmds(struct adreno_device *adreno_dev,
 			break;
 		}
 
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 		drawctxt->submitted_timestamp = timestamp;
+#endif
 
 		count++;
 	}
@@ -2193,13 +2223,19 @@ static void cmdobj_profile_ticks(struct adreno_device *adreno_dev,
 static void retire_cmdobj(struct adreno_device *adreno_dev,
 		struct kgsl_drawobj_cmd *cmdobj)
 {
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	struct adreno_dispatcher *dispatcher = &adreno_dev->dispatcher;
+#endif
 	struct kgsl_drawobj *drawobj = DRAWOBJ(cmdobj);
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	struct adreno_context *drawctxt = ADRENO_CONTEXT(drawobj->context);
 	struct adreno_ringbuffer *rb = drawctxt->rb;
+#endif
 	struct kgsl_context *context = drawobj->context;
 	uint64_t start = 0, end = 0;
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	struct retire_info info = {0};
+#endif
 
 	if (cmdobj->fault_recovery != 0) {
 		set_bit(ADRENO_CONTEXT_FAULT, &drawobj->context->priv);
@@ -2209,12 +2245,14 @@ static void retire_cmdobj(struct adreno_device *adreno_dev,
 	if (test_bit(CMDOBJ_PROFILE, &cmdobj->priv))
 		cmdobj_profile_ticks(adreno_dev, cmdobj, &start, &end);
 
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	info.inflight = (int)dispatcher->inflight;
 	info.rb_id = rb->id;
 	info.wptr = rb->wptr;
 	info.timestamp = drawobj->timestamp;
 	info.sop = start;
 	info.eop = end;
+#endif
 
 	msm_perf_events_update(MSM_PERF_GFX, MSM_PERF_RETIRED,
 			       pid_nr(context->proc_priv->pid),
@@ -2224,6 +2262,7 @@ static void retire_cmdobj(struct adreno_device *adreno_dev,
 	if (drawobj->flags & KGSL_DRAWOBJ_END_OF_FRAME)
 		atomic64_inc(&context->proc_priv->frame_count);
 
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	/*
 	 * For A3xx we still get the rptr from the CP_RB_RPTR instead of
 	 * rptr scratch out address. At this point GPU clocks turned off.
@@ -2251,6 +2290,8 @@ static void retire_cmdobj(struct adreno_device *adreno_dev,
 
 	trace_adreno_cmdbatch_done(drawobj->context->id,
 		drawobj->context->priority, drawobj->timestamp);
+#endif
+
 	kgsl_drawobj_destroy(drawobj);
 }
 

@@ -385,6 +385,7 @@ struct submission_info {
 	u32 gmu_dispatch_queue;
 };
 
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 /**
  * struct retire_info - Container for retire statistics
  * @inflight: NUmber of commands that are inflight
@@ -410,6 +411,7 @@ struct retire_info {
 	u64 eop;
 	u64 retired_on_gmu;
 };
+#endif
 
 long kgsl_ioctl_device_getproperty(struct kgsl_device_private *dev_priv,
 					  unsigned int cmd, void *data);

@@ -18,6 +18,15 @@
 #include "adreno_a5xx.h"
 #include "adreno_gen7.h"
 
+#ifndef CONFIG_QCOM_KGSL_DEBUG
+#undef DEFINE_EVENT
+#undef TRACE_EVENT
+#undef DECLARE_EVENT_CLASS
+#define DEFINE_EVENT DEFINE_EVENT_NOP
+#define TRACE_EVENT TRACE_EVENT_NOP
+#define DECLARE_EVENT_CLASS DECLARE_EVENT_CLASS_NOP
+#endif
+
 #define ADRENO_FT_TYPES \
 	{ BIT(KGSL_FT_OFF), "off" }, \
 	{ BIT(KGSL_FT_REPLAY), "replay" }, \
@@ -101,6 +110,7 @@ TRACE_EVENT(adreno_cmdbatch_submitted,
 	)
 );
 
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 TRACE_EVENT(adreno_cmdbatch_retired,
 		TP_PROTO(struct kgsl_context *context, struct retire_info *info,
 			unsigned int flags, int q_inflight,
@@ -159,6 +169,7 @@ TRACE_EVENT(adreno_cmdbatch_retired,
 			__entry->submitted_to_rb, __entry->retired_on_gmu
 	 )
 );
+#endif
 
 TRACE_EVENT(gmu_ao_sync,
 	TP_PROTO(u64 ticks),

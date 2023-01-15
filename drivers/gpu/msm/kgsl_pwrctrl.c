@@ -1216,8 +1216,10 @@ static void kgsl_pwrctrl_clk(struct kgsl_device *device, bool state,
 	if (!state) {
 		if (test_and_clear_bit(KGSL_PWRFLAGS_CLK_ON,
 			&pwr->power_flags)) {
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 			trace_kgsl_clk(device, state,
 					kgsl_pwrctrl_active_freq(pwr));
+#endif
 			/* Disable gpu-bimc-interface clocks */
 			if (pwr->gpu_bimc_int_clk &&
 					pwr->gpu_bimc_interface_enabled) {
@@ -1255,8 +1257,10 @@ static void kgsl_pwrctrl_clk(struct kgsl_device *device, bool state,
 	} else {
 		if (!test_and_set_bit(KGSL_PWRFLAGS_CLK_ON,
 			&pwr->power_flags)) {
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 			trace_kgsl_clk(device, state,
 					kgsl_pwrctrl_active_freq(pwr));
+#endif
 			/* High latency clock maintenance. */
 			if ((device->state != KGSL_STATE_NAP) &&
 				(device->state != KGSL_STATE_MINBW)) {

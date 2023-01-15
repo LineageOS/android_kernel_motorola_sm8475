@@ -83,7 +83,9 @@ struct kgsl_drawobj_cmd {
 	struct kgsl_mem_entry *profiling_buf_entry;
 	uint64_t profiling_buffer_gpuaddr;
 	unsigned int profile_index;
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	uint64_t submit_ticks;
+#endif
 	/* @numibs: Number of ibs in this cmdobj */
 	u32 numibs;
 	/* @requeue_cnt: Number of times cmdobj was requeued before submission to dq succeeded */

@@ -242,7 +242,9 @@ int adreno_ringbuffer_submitcmd(struct adreno_device *adreno_dev,
 		struct kgsl_drawobj_cmd *cmdobj,
 		struct adreno_submit_time *time)
 {
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 	struct adreno_submit_time local = { 0 };
+#endif
 	struct kgsl_drawobj *drawobj = DRAWOBJ(cmdobj);
 	struct adreno_context *drawctxt = ADRENO_CONTEXT(drawobj->context);
 	struct adreno_ringbuffer *rb = drawctxt->rb;
@@ -285,10 +287,12 @@ int adreno_ringbuffer_submitcmd(struct adreno_device *adreno_dev,
 		 * ringbuffer.  If an upstream caller already passed down a
 		 * pointer piggyback on that otherwise use a local struct
 		 */
+#ifdef CONFIG_QCOM_KGSL_DEBUG
 		if (!time)
 			time = &local;
 
 		time->drawobj = drawobj;
+#endif
 	}
 
 	flags |= F_PREAMBLE;
