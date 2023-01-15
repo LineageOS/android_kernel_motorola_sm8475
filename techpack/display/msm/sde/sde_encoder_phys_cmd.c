@@ -304,7 +304,6 @@ static void sde_encoder_phys_cmd_wr_ptr_irq(void *arg, int irq_idx)
 	struct sde_encoder_phys *phys_enc = arg;
 	struct sde_hw_ctl *ctl;
 	u32 event = 0, qsync_mode = 0;
-	struct sde_hw_pp_vsync_info info[MAX_CHANNELS_PER_ENC] = {{0}};
 	struct sde_encoder_phys_cmd *cmd_enc;
 
 	if (!phys_enc || !phys_enc->hw_ctl)
@@ -324,12 +323,6 @@ static void sde_encoder_phys_cmd_wr_ptr_irq(void *arg, int irq_idx)
 			spin_unlock(phys_enc->enc_spinlock);
 		}
 	}
-
-	sde_encoder_helper_get_pp_line_count(phys_enc->parent, info);
-	SDE_EVT32_IRQ(DRMID(phys_enc->parent),
-		ctl->idx - CTL_0, event,
-		info[0].pp_idx, info[0].intf_idx, info[0].wr_ptr_line_count,
-		info[1].pp_idx, info[1].intf_idx, info[1].wr_ptr_line_count, qsync_mode);
 
 	if (qsync_mode)
 		sde_encoder_override_tearcheck_rd_ptr(phys_enc);
@@ -592,11 +585,8 @@ static bool _sde_encoder_phys_is_disabling_ppsplit_slave(
 static int _sde_encoder_phys_cmd_poll_write_pointer_started(
 		struct sde_encoder_phys *phys_enc)
 {
-	struct sde_encoder_phys_cmd *cmd_enc =
-			to_sde_encoder_phys_cmd(phys_enc);
 	struct sde_hw_pingpong *hw_pp = phys_enc->hw_pp;
 	struct sde_hw_intf *hw_intf = phys_enc->hw_intf;
-	struct sde_hw_pp_vsync_info info;
 	u32 timeout_us = SDE_ENC_WR_PTR_START_TIMEOUT_US;
 	int ret = 0;
 
@@ -612,25 +602,6 @@ static int _sde_encoder_phys_cmd_poll_write_pointer_started(
 				!hw_pp->ops.poll_timeout_wr_ptr)
 			goto end;
 	}
-
-	if (phys_enc->has_intf_te)
-		ret = hw_intf->ops.get_vsync_info(hw_intf, &info);
-	else
-		ret = hw_pp->ops.get_vsync_info(hw_pp, &info);
-
-	if (ret)
-		return ret;
-
-	SDE_DEBUG_CMDENC(cmd_enc,
-			"pp:%d intf:%d rd_ptr %d wr_ptr %d\n",
-			phys_enc->hw_pp->idx - PINGPONG_0,
-			phys_enc->hw_intf->idx - INTF_0,
-			info.rd_ptr_line_count,
-			info.wr_ptr_line_count);
-	SDE_EVT32_VERBOSE(DRMID(phys_enc->parent),
-			phys_enc->hw_pp->idx - PINGPONG_0,
-			phys_enc->hw_intf->idx - INTF_0,
-			info.wr_ptr_line_count);
 
 	if (phys_enc->has_intf_te)
 		ret = hw_intf->ops.poll_timeout_wr_ptr(hw_intf, timeout_us);
