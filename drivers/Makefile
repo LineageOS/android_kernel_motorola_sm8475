@@ -195,3 +195,4 @@ obj-y				+= mmi_info/
 obj-y				+= moto_f_usbnet/
 obj-y				+= moto_f_mass_storage/
 obj-y				+= sensors/
+obj-y				+= ese/st54x/
