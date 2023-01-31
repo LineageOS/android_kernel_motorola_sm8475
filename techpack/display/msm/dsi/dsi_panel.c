@@ -1969,6 +1969,8 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-qsync-off-commands",
 	"qcom,mdss-dsi-hbm-fod-on-command",
 	"qcom,mdss-dsi-hbm-off-command",
+	"qcom,mdss-dsi-dc-on-command",
+	"qcom,mdss-dsi-dc-off-command",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -1999,6 +2001,8 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-qsync-off-commands-state",
 	"qcom,mdss-dsi-hbm-fod-on-command-state",
 	"qcom,mdss-dsi-hbm-off-command-state",
+	"qcom,mdss-dsi-dc-on-command-state",
+	"qcom,mdss-dsi-dc-off-command-state",
 };
 
 int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
@@ -3787,6 +3791,18 @@ static int dsi_panel_set_hbm_status(struct dsi_panel *panel,
 	return 0;
 }
 
+static int dsi_panel_set_dc_dimming_status(struct dsi_panel *panel, bool status)
+{
+	int rc;
+
+	rc = dsi_panel_tx_cmd_set(panel, status ? DSI_CMD_SET_DC_ON
+						: DSI_CMD_SET_DC_OFF);
+	if (rc)
+		DSI_ERR("failed to send dc dimming command: %d\n", rc);
+
+	return rc;
+}
+
 static ssize_t sysfs_fod_hbm_read(struct device *dev,
 				  struct device_attribute *attr,
 				  char *buf)
@@ -3833,8 +3849,55 @@ exit:
 
 static DEVICE_ATTR(fod_hbm, 0644, sysfs_fod_hbm_read, sysfs_fod_hbm_write);
 
+static ssize_t sysfs_dc_dimming_read(struct device *dev,
+				     struct device_attribute *attr,
+				     char *buf)
+{
+	struct dsi_display *display = dev_get_drvdata(dev);
+	struct dsi_panel *panel = display->panel;
+	bool status;
+
+	mutex_lock(&panel->panel_lock);
+	status = panel->dc_dimming_enabled;
+	mutex_unlock(&panel->panel_lock);
+
+	return snprintf(buf, PAGE_SIZE, "%u\n", status);
+}
+
+static ssize_t sysfs_dc_dimming_write(struct device *dev,
+				      struct device_attribute *attr,
+				      const char *buf, size_t count)
+{
+	struct dsi_display *display = dev_get_drvdata(dev);
+	struct dsi_panel *panel = display->panel;
+	bool status;
+	int rc;
+
+	rc = kstrtobool(buf, &status);
+	if (rc)
+		return rc;
+
+	mutex_lock(&panel->panel_lock);
+	if (panel->dc_dimming_enabled == status)
+		goto exit;
+
+	rc = dsi_panel_set_dc_dimming_status(panel, status);
+	if (rc)
+		goto exit;
+
+	panel->dc_dimming_enabled = status;
+
+exit:
+	mutex_unlock(&panel->panel_lock);
+
+	return rc ?: count;
+}
+
+static DEVICE_ATTR(dsi_display_dc, 0644, sysfs_dc_dimming_read, sysfs_dc_dimming_write);
+
 static struct attribute *panel_attrs[] = {
 	&dev_attr_fod_hbm.attr,
+	&dev_attr_dsi_display_dc.attr,
 	NULL,
 };
 
