@@ -3780,7 +3780,7 @@ static int dsi_panel_set_hbm_status(struct dsi_panel *panel,
 		return -EINVAL;
 	}
 
-	if (type == DSI_CMD_SET_HBM_FOD_ON) {
+	if (type == DSI_CMD_SET_HBM_FOD_ON || type == DSI_CMD_SET_HBM_OFF) {
 		rc = dsi_panel_update_hbm_cmd(cmd_set, MIPI_DCS_SET_DISPLAY_BRIGHTNESS,
 					      bl_level);
 		if (rc) {
