@@ -3805,6 +3805,12 @@ static int dsi_panel_set_hbm_status(struct dsi_panel *panel,
 	return 0;
 }
 
+static int dsi_panel_apply_hbm_status(struct dsi_panel *panel)
+{
+	return dsi_panel_set_hbm_status(panel, panel->fod_hbm_enabled,
+					panel->hbm_enabled);
+}
+
 static int dsi_panel_set_dc_dimming_status(struct dsi_panel *panel, bool status)
 {
 	int rc;
@@ -5301,6 +5307,13 @@ int dsi_panel_post_enable(struct dsi_panel *panel)
 		       panel->name, rc);
 		goto error;
 	}
+
+	if (panel->hbm_enabled) {
+		rc = dsi_panel_apply_hbm_status(panel);
+		if (rc)
+			goto error;
+	}
+
 error:
 	mutex_unlock(&panel->panel_lock);
 	return rc;
