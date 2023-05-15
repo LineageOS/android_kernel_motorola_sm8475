@@ -1,0 +1,29 @@
+/* Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+#include "parrot-moto-common-overlay-base.dtsi"
+#include "parrot-moto-common-overlay.dtsi"
+#include "parrot-geneva-charger-overlay.dtsi"
+#include "parrot-geneva-thermal-overlay.dtsi"
+#include "parrot-geneva-touchscreen-overlay.dtsi"
+#include "parrot-geneva-sensor-overlay.dtsi"
+#include "parrot-geneva-nfc-overlay.dtsi"
+#include "moto-geneva-wl2864c.dtsi"
+#include "parrot-geneva-fps-overlay.dtsi"
+#include "parrot-geneva-haptic-overlay.dtsi"
+
+&sdhc_2 {
+	status = "disabled";
+};
+
+&tlmm {
+	qcom,gpios-reserved = <2 3 38 18 19 20 21>;
+};

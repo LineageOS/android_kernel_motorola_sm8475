@@ -118,6 +118,13 @@
 	};
 };
 
+&pmk8350_sdam_1 {
+	ufs_dev: ufs_dev@94 {
+		reg = <0x94 0x1>;
+		bits = <0 0>;
+	};
+};
+
 &pm6450_gpios {
 	key_vol_up {
 		key_vol_up_default: key_vol_up_default {
@@ -258,6 +265,7 @@
 
 &flash_led {
 	status = "ok";
+	qcom,use-qti-battery-interface;
 };
 
 &pmr735a_spmi {
@@ -560,7 +568,7 @@
 			L4J: pm8010j_l4: regulator@4300 {
 				reg = <0x4300>;
 				regulator-name = "pm8010j_l4";
-				regulator-min-microvolt = <1792000>;
+				regulator-min-microvolt = <1664000>;
 				regulator-max-microvolt = <1888000>;
 				qcom,min-dropout-voltage = <152000>;
 				qcom,hpm-min-load = <0>;

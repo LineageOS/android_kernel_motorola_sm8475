@@ -8,6 +8,7 @@
 		qcom,bt-reset-gpio = <&tlmm 35 0>; /* BT_EN */
 		qcom,bt-sw-ctrl-gpio = <&tlmm 61 0>; /* SW_CTRL */
 		qcom,wl-reset-gpio = <&tlmm 36 0>; /* WL_EN */
+		tsens = "quiet-therm";
 
 		qcom,bt-vdd-io-supply = <&L22B>;  /* IO */
 		qcom,bt-vdd-aon-supply = <&S7B>;
@@ -55,8 +56,9 @@
 
 	icnss2: qcom,wcn6750 {
 		compatible = "qcom,wcn6750";
-		reg = <0x17210040 0x0>;
-		reg-names = "msi_addr";
+		reg = <0x17210040 0x0>,
+		      <0xb0000000 0x10000>;
+		reg-names = "msi_addr", "smmu_iova_ipa";
 		qcom,rproc-handle = <&wpss_pas>;
 		iommus = <&apps_smmu 0x1c00 0x1>;
 		interrupts = <GIC_SPI 768 IRQ_TYPE_EDGE_RISING>,
@@ -95,9 +97,11 @@
 		qcom,iommu-dma = "fastmap";
 		qcom,iommu-faults = "stall-disable", "HUPCF", "non-fatal";
 		qcom,iommu-dma-addr-pool = <0xa0000000 0x10000000>;
+		qcom,iommu-geometry = <0xa0000000 0x10010000>;
 		dma-coherent;
 		qcom,fw-prefix;
 		qcom,wlan;
+		tsens = "quiet-therm";
 		qcom,wlan-msa-fixed-region = <&wlan_fw_mem>;
 		vdd-cx-mx-supply = <&S7B>;
 		qcom,vdd-cx-mx-config = <880000 1120000 0 0 1>;

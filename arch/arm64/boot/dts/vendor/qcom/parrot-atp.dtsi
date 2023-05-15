@@ -51,11 +51,32 @@
 	qcom,vddp-ref-clk-supply = <&L13B>;
 	qcom,vddp-ref-clk-max-microamp = <100>;
 
+	/*
+	 * ufs-dev-types and nvmem entries are for ufs device
+	 * identification using nvmem interface. Use number of
+	 * ufs devices supported for ufs-dev-types, and nvmem handle
+	 * added by pmic for sdam register.
+	 *
+	 * Default value taken by driver is bit[0] = 0 for 3.x and
+	 * bit[0] = 1 for 2.x driver code takes this as default case.
+	 *
+	 * But Bit value to identify ufs device is not consistent
+	 * across the targets it could be bit[0] = 0/1 for UFS2.x/3x
+	 * and vice versa. If the bit[0] value is not same as default
+	 * value used in driver and if its reverted then use flag
+	 * qcom,ufs-dev-revert to identify ufs device.
+	 */
+	ufs-dev-types = <2>;
+	qcom,ufs-dev-revert;
+	nvmem-cells = <&ufs_dev>, <&boot_config>;
+	nvmem-cell-names = "ufs_dev", "boot_conf";
+
 	status = "ok";
 };
 
 &battery_charger {
 	qcom,thermal-mitigation = <3000000 1500000 1000000 500000>;
+	qcom,wireless-charging-not-supported;
 };
 
 &qupv3_se9_spi {
@@ -112,16 +133,14 @@
 };
 
 &sdhc_1 {
-	status = "disabled";
+	status = "ok";
 
 	vdd-supply = <&L24B>;
-	qcom,vdd-voltage-level = <2960000 2960000>;
 	qcom,vdd-current-level = <0 570000>;
 
 	vdd-io-supply = <&L19B>;
 	qcom,vdd-io-always-on;
 	qcom,vdd-io-lpm-sup;
-	qcom,vdd-io-voltage-level = <1800000 1800000>;
 	qcom,vdd-io-current-level = <0 325000>;
 
 	pinctrl-names = "default", "sleep";

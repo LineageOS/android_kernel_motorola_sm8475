@@ -34,7 +34,7 @@
 
 	reserved_memory: reserved-memory { };
 
-	mem-offline {
+	mem_offline: mem-offline {
 		compatible = "qcom,mem-offline";
 		offline-sizes = <0x1 0x40000000 0x0 0x40000000>,
 				<0x1 0xc0000000 0x0 0x80000000>,
@@ -579,6 +579,7 @@
 		qcom,bt-reset-gpio = <&tlmm 114 0>; /* BT_EN */
 		qcom,bt-sw-ctrl-gpio = <&tlmm 83 0>; /* SW_CTRL */
 		qcom,wl-reset-gpio = <&tlmm 49 0>; /* WL_EN */
+		tsens = "quiet-therm";
 
 		qcom,bt-vdd-io-supply = <&L18B>;  /* IO */
 		qcom,bt-vdd-aon-supply = <&S7B>;
@@ -637,13 +638,6 @@
 		compatible = "qcom,tlmm-vm-mem-access";
 		qcom,master;
 		tlmm-vm-gpio-list = <>;
-	};
-
-	wdog: qcom,wdt@17410000 {
-		compatible = "qcom,msm-watchdog";
-		reg = <0x17410000 0x1000>;
-		reg-names = "wdt-base";
-		interrupts = <GIC_SPI 0 IRQ_TYPE_LEVEL_HIGH>;
 	};
 
 	arch_timer: timer {
@@ -852,6 +846,11 @@
 
 		scmi_c1dcvs: protocol@87 {
 			reg = <0x87>;
+			#clock-cells = <1>;
+		};
+
+		scmi_shared_rail: protocol@88 {
+			reg = <0x88>;
 			#clock-cells = <1>;
 		};
 	};
@@ -1369,6 +1368,7 @@
 				compatible = "qcom,memlat-mon";
 				qcom,cpulist = <&CPU4 &CPU5 &CPU6>;
 				qcom,cpufreq-memfreq-tbl =
+					<  300000  307200 >,
 					<  940800  537600 >,
 					< 1132800  748800 >,
 					< 1382400  979200 >,
@@ -1383,6 +1383,7 @@
 				compatible = "qcom,memlat-mon";
 				qcom,cpulist = <&CPU7>;
 				qcom,cpufreq-memfreq-tbl =
+					<  300000  307200 >,
 					< 1094400  537600 >,
 					< 1401600  748800 >,
 					< 1766400 1209600 >,
@@ -1414,7 +1415,7 @@
 				compatible = "qcom,memlat-mon";
 				qcom,cpulist = <&CPU4 &CPU5 &CPU6 &CPU7>;
 				qcom,cpufreq-memfreq-tbl =
-					< 2169600 0 >,
+					<  300000 0 >,
 					< 2707200 1 >;
 				qcom,sampling-enabled;
 			};
@@ -1423,7 +1424,7 @@
 				compatible = "qcom,memlat-mon";
 				qcom,cpulist = <&CPU7>;
 				qcom,cpufreq-memfreq-tbl =
-					< 2169600 0 >,
+					< 2035200 0 >,
 					< 2707200 1 >;
 				qcom,sampling-enabled;
 			};
@@ -1498,8 +1499,18 @@
 		qcom,gpucc = <&gpucc>;
 		qcom,apsscc = <&apsscc>;
 		qcom,mccc = <&mccc>;
-		clock-names = "xo_clk_src";
-		clocks = <&rpmhcc RPMH_CXO_CLK>;
+		clocks = <&rpmhcc RPMH_CXO_CLK>,
+			<&gcc 0>,
+			<&camcc 0>,
+			<&dispcc 0>,
+			<&gpucc 0>,
+			<&videocc 0>;
+		clock-names = "xo_clk_src",
+				"gcc",
+				"camcc",
+				"dispcc",
+				"gpucc",
+				"videocc";
 		#clock-cells = <1>;
 	};
 
@@ -2025,13 +2036,15 @@
 				      <&adsp_smp2p_in 0 0>,
 				      <&adsp_smp2p_in 2 0>,
 				      <&adsp_smp2p_in 1 0>,
-				      <&adsp_smp2p_in 3 0>;
+				      <&adsp_smp2p_in 3 0>,
+				      <&adsp_smp2p_in 7 0>;
 
 		interrupt-names = "wdog",
 				  "fatal",
 				  "handover",
 				  "ready",
-				  "stop-ack";
+				  "stop-ack",
+				  "shutdown-ack";
 
 		qcom,smem-states = <&adsp_smp2p_out 0>;
 		qcom,smem-state-names = "stop";
@@ -2091,13 +2104,15 @@
 				      <&cdsp_smp2p_in 0 0>,
 				      <&cdsp_smp2p_in 2 0>,
 				      <&cdsp_smp2p_in 1 0>,
-				      <&cdsp_smp2p_in 3 0>;
+				      <&cdsp_smp2p_in 3 0>,
+				      <&cdsp_smp2p_in 7 0>;
 
 		interrupt-names = "wdog",
 				  "fatal",
 				  "handover",
 				  "ready",
-				  "stop-ack";
+				  "stop-ack",
+				  "shutdown-ack";
 
 		/* Outputs to turing */
 		qcom,smem-states = <&cdsp_smp2p_out 0>;
@@ -2238,15 +2253,13 @@
 				      <&wpss_smp2p_in 0 0>,
 				      <&wpss_smp2p_in 2 0>,
 				      <&wpss_smp2p_in 1 0>,
-				      <&wpss_smp2p_in 3 0>,
-				      <&wpss_smp2p_in 7 0>;
+				      <&wpss_smp2p_in 3 0>;
 
 		interrupt-names = "wdog",
 				   "fatal",
 				   "handover",
 				   "ready",
-				   "stop-ack",
-				   "shutdown-ack";
+				   "stop-ack";
 
 		/* Outputs to wpss */
 		qcom,smem-states = <&wpss_smp2p_out 0>;
@@ -3189,7 +3202,7 @@
 
 		/* SVS2 */
 		qcom,svs2 =
-		<590000 0 590000 1900000 0 76800>;
+		<0 0 0 1900000 0 76800>;
 
 		/* SVS */
 		qcom,svs =
@@ -3404,6 +3417,7 @@
 	clocks = <&gcc GCC_GPU_CFG_AHB_CLK>;
 	clock-names = "ahb_clk";
 	parent-supply = <&VDD_CX_LEVEL>;
+	qcom,clk-ctrl = <&gpucc 0x9130 22 1>;
 	status = "ok";
 };
 

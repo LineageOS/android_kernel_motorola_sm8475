@@ -18,24 +18,22 @@
 #include "cape-moto-common-overlay.dtsi"
 #include "waipio-moto-common-charger.dtsi"
 #include "cape-bronco-touchscreen-overlay.dtsi"
-#include "moto-bronco-wl2868c.dtsi"
+#include "moto-bronco-wl2864c.dtsi"
 #include "cape-bronco-sensor-overlay.dtsi"
 #include "cape-bronco-fingerprint-overlay.dtsi"
-#include "waipio-hiphic-se-overlay.dtsi"
 #include "cape-bronco-thermal-overlay.dtsi"
 #include "cape-bronco-charger-overlay.dtsi"
-#include <dt-bindings/interrupt-controller/arm-gic.h>
 #include "cape-bronco-haptics-overlay.dtsi"
 
 &tlmm {
 	redriver_enable: redriver_enable {
 		mux {
-			pins = "gpio19";
+			pins = "gpio54";
 			function = "gpio";
 		};
 
 		config {
-			pins = "gpio19";
+			pins = "gpio54";
 			drive-strength = <2>;
 			bias-disable; /* NO PULL */
 			output-high;
@@ -43,30 +41,45 @@
 	};
 	redriver_disable: redriver_disable {
 		mux {
-			pins = "gpio19";
+			pins = "gpio54";
 			function = "gpio";
 		};
 
 		config {
-			pins = "gpio19";
+			pins = "gpio54";
 			drive-strength = <2>;
 			output-low;
+		};
+	};
+
+	google_key_default: google_key_default {
+		mux {
+			pins = "gpio55";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio55";
+			drive-strength = <2>;
+			bias-pull-up;
 		};
 	};
 };
 
 &soc {
-        pinctrl@f000000 {
-                compatible = "qcom,cape-pinctrl";
-                reg = <0x0F000000 0x1000000>;
-                interrupts = <GIC_SPI 208 IRQ_TYPE_LEVEL_HIGH>;
-                gpio-controller;
-                #gpio-cells = <2>;
-                interrupt-controller;
-                #interrupt-cells = <2>;
-                wakeup-parent = <&pdc>;
-                qcom,gpios-reserved = <36 37 38 39>;
-        };
+	gpio_keys {
+		pinctrl-0 = <&key_vol_up_default &google_key_default>;
+
+		google_key {
+			label = "google_key";
+			gpios = <&tlmm 55 GPIO_ACTIVE_LOW>;
+			linux,input-type = <1>;
+			linux,code = <KEY_SEARCH>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+			linux,can-disable;
+		};
+	};
 };
 
 &qupv3_se9_i2c {
@@ -74,12 +87,15 @@
         qcom,clk-freq-out = <1000000>;
         #address-cells = <1>;
         #size-cells = <0>;
-        st21nfc@8 {
-                compatible = "st,st21nfc";
-                reg = <0x08>;
-                st,irq_gpio = <&tlmm 46 0x00>;
-                st,reset_gpio = <&tlmm 34 0x00>;
-                st,clkreq_gpio = <&tlmm 35 0x00>;
+        nq@28 {
+                compatible = "qcom,sn-nci";
+                reg = <0x28>;
+                qcom,sn-irq = <&tlmm 46 0x00>;
+                qcom,sn-ven = <&tlmm 34 0x00>;
+                qcom,sn-clkreq = <&tlmm 35 0x00>;
+                qcom,sn-vdd-1p8-supply = <&S10B>;
+                qcom,sn-vdd-1p8-voltage = <1800000 1800000>;
+                qcom,sn-vdd-1p8-current = <157000>;
                 interrupt-parent = <&tlmm>;
                 interrupts = <46 0>;
                 interrupt-names = "nfc_irq";
@@ -96,11 +112,41 @@
 
 &redriver {
 	status = "ok";
+	redriver,enable-gpio = <&tlmm 54 0x00>;
+	config-seq =
+		/* <reg_offset, value, delay_us> */
+		<0x9d 0x80 10000
+		0x9d 0x00 0
+		0x40 0x80 0
+		0x9f 0x02 0
+		0x8d 0x01 0
+		0x90 0x01 0
+		0x51 0x87 0
+		0x50 0x20 0
+		0x54 0x11 0
+		0x5d 0x66 0
+		0x52 0x50 0
+		0x55 0x00 0
+		0x56 0x00 0
+		0x57 0x00 0
+		0x58 0x00 0
+		0x59 0x00 0
+		0x5a 0x00 0
+		0x5b 0x00 0
+		0x5e 0x07 0
+		0x5f 0x00 0
+		0x60 0x00 0
+		0x61 0x03 0
+		0x65 0x40 0
+		0x66 0x00 0
+		0x67 0x03 0
+		0x75 0x0c 0
+		0x77 0x00 0
+		0x78 0x7c 0>;
 };
 
 &usb0 {
 	ssusb_redriver = <&redriver>;
-	qcom,force-adb-enable;
 };
 
 &sdhc_2 {

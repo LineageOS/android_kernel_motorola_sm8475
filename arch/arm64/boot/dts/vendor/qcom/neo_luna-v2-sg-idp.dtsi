@@ -1,4 +1,12 @@
-#include "neo-idp.dtsi"
+#include "neo-sg-idp.dtsi"
 
 &soc {
+};
+
+&audio_ml_cma {
+	status = "disabled";
+};
+
+&audio_cma_mem {
+	status = "disabled";
 };
