@@ -963,10 +963,10 @@
 				};
 
 				iova-mem-region-shared {
-					/* Shared region is 150MB long */
+					/* Shared region is 261MB long */
 					iova-region-name = "shared";
-					iova-region-start = <0x7400000>;
-					iova-region-len = <0x9600000>;
+					iova-region-start = <0x500000>;
+					iova-region-len = <0x10500000>;
 					iova-region-id = <0x1>;
 					status = "ok";
 				};
@@ -1575,22 +1575,20 @@
 		regulator-names = "camss-vdd";
 		camss-vdd-supply = <&cam_cc_titan_top_gdsc>;
 		clock-names =
-			"soc_fast_ahb",
 			"icp_ahb_clk",
 			"icp_clk_src",
 			"icp_clk";
 		src-clock-name = "icp_clk_src";
 		clocks =
-			<&camcc CAM_CC_FAST_AHB_CLK_SRC>,
 			<&camcc CAM_CC_ICP_AHB_CLK>,
 			<&camcc CAM_CC_ICP_CLK_SRC>,
 			<&camcc CAM_CC_ICP_CLK>;
 
 		clock-rates =
-			<100000000 0 400000000 0>,
-			<200000000 0 480000000 0>,
-			<300000000 0 600000000 0>,
-			<400000000 0 600000000 0>;
+			<0 400000000 0>,
+			<0 480000000 0>,
+			<0 600000000 0>,
+			<0 600000000 0>;
 		clock-cntl-level = "lowsvs", "svs", "svs_l1", "nominal";
 		fw_name = "CAMERA_ICP_480.elf";
 		ubwc-ipe-fetch-cfg = <0x7073 0x707b>;
@@ -1750,6 +1748,7 @@
 		regulator-names = "camss-vdd";
 		camss-vdd-supply = <&cam_cc_titan_top_gdsc>;
 		clock-names =
+			"soc_fast_ahb",
 			"gcc_axi_hf_clk",
 			"gcc_axi_sf_clk",
 			"slow_ahb_clk_src",
@@ -1758,6 +1757,7 @@
 			"camnoc_axi_clk_src",
 			"camnoc_axi_clk";
 		clocks =
+			<&camcc CAM_CC_FAST_AHB_CLK_SRC>,
 			<&gcc GCC_CAMERA_HF_AXI_CLK>,
 			<&gcc GCC_CAMERA_SF_AXI_CLK>,
 			<&camcc CAM_CC_SLOW_AHB_CLK_SRC>,
@@ -1767,11 +1767,11 @@
 			<&camcc CAM_CC_CAMNOC_AXI_CLK>;
 		src-clock-name = "camnoc_axi_clk_src";
 		clock-rates =
-			<0 0 0 0 0 0 0>,
-			<0 0 80000000 0 0 300000000 0>,
-			<0 0 80000000 0 0 400000000 0>,
-			<0 0 80000000 0 0 400000000 0>,
-			<0 0 80000000 0 0 480000000 0>;
+			<0 0 0 0 0 0 0 0>,
+			<100000000 0 0 80000000 0 0 300000000 0>,
+			<200000000 0 0 80000000 0 0 400000000 0>,
+			<300000000 0 0 80000000 0 0 400000000 0>,
+			<400000000 0 0 80000000 0 0 480000000 0>;
 		clock-cntl-level = "suspend", "lowsvs", "svs", "svs_l1", "nominal";
 		control-camnoc-axi-clk;
 		camnoc-bus-width = <32>;

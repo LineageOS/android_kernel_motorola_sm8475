@@ -604,6 +604,12 @@ Image sensor node contains properties of camera image sensor
 	"SET_RATE" clock is enabled and the rate is set to the value specified
 	in the property clock-rates.
 
+- hw-no-ops
+  Usage: optional
+  Value type: <boolean>
+  Definition: Specifies if all hardware operations should be disabled for this
+	sensor device.
+
 =============================
 ACTUATOR MODULE
 =============================

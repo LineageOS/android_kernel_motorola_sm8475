@@ -7,10 +7,10 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
 
-#include "cape-camera-sensor-bronco-common-evt1.dtsi"
+#include "cape-camera-sensor-zeekr-common.dtsi"
 / {
-	model = "bronco";
-	compatible = "qcom,cape", "qcom,capep", "moto,bronco";
+	model = "zeekr";
+	compatible = "qcom,cape", "qcom,capep", "moto,zeekr";
 	qcom,msm-id = <530 0x10000>, <531 0x10000>, <540 0x10000>;
-	qcom,board-id = <0x41 0xA100>;
+	qcom,board-id = <0x4B 0x9100>;
 };

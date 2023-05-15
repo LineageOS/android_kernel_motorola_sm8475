@@ -7,10 +7,10 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
 
-#include "cape-camera-sensor-bronco-common-evt2.dtsi"
+#include "ukee-camera.dtsi"
 / {
-	model = "bronco";
-	compatible = "qcom,cape", "qcom,capep", "moto,bronco";
-	qcom,msm-id = <530 0x10000>, <531 0x10000>, <540 0x10000>;
-	qcom,board-id = <0x41 0xA200>;
+	model = "Qualcomm Technologies, Inc. Ukee v1 SoC";
+	compatible = "qcom,ukee";
+	qcom,msm-id = <591 0x10000>;
+	qcom,board-id = <0 0>;
 };

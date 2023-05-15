@@ -25,12 +25,22 @@ dtbo-$(CONFIG_ARCH_DIWALI) += diwali-camera.dtbo
 dtbo-$(CONFIG_ARCH_DIWALI) += diwali-camera-sensor-idp.dtbo
 dtbo-$(CONFIG_ARCH_DIWALI) += diwali-camera-sensor-qrd.dtbo
 
+ifeq ($(CONFIG_LYNKCO_DTB),y)
+dtbo-$(CONFIG_ARCH_DIWALI) += \
+	diwali-camera-sensor-lynkco-evb1.dtbo
+endif  #($(CONFIG_LYNKCO_DTB),y)
+
 dtbo-$(CONFIG_ARCH_CAPE) += cape-camera.dtbo
 #remove useless qcom device tree in moto build
 ifneq ($(CONFIG_MMI_DEVICE_DTBS),y)
 dtbo-$(CONFIG_ARCH_CAPE) += cape-camera-sensor-mtp.dtbo \
 				cape-camera-sensor-cdp.dtbo \
 				cape-camera-sensor-qrd.dtbo
+
+dtbo-$(CONFIG_ARCH_CAPE) += ukee-camera-sensor-mtp.dtbo \
+				ukee-camera-sensor-cdp.dtbo \
+				ukee-camera-sensor-qrd.dtbo
+dtbo-$(CONFIG_ARCH_CAPE) += ukee-camera.dtbo
 else
 ifeq ($(CONFIG_EQS_DTB),y)
 dtbo-$(CONFIG_ARCH_CAPE) += \
@@ -40,19 +50,19 @@ dtbo-$(CONFIG_ARCH_CAPE) += \
 	cape-camera-sensor-eqs-dvt1b1.dtbo
 endif  #($(CONFIG_EQS_DTB),y)
 ifeq ($(CONFIG_BRONCO_DTB),y)
-dtbo-$(CONFIG_ARCH_CAPE) += \
-        cape-camera-sensor-bronco-evt1.dtbo \
-        cape-camera-sensor-bronco-evt2.dtbo \
-        cape-camera-sensor-bronco-dvt1a1.dtbo \
-        cape-camera-sensor-bronco-dvt1b1.dtbo
+dtbo-$(CONFIG_ARCH_CAPE) += cape-camera-sensor-bronco-evb.dtbo
 endif  #($(CONFIG_BRONCO_DTB),y)
 ifeq ($(CONFIG_ONELI_DTB),y)
 dtbo-$(CONFIG_ARCH_CAPE) += \
 	cape-camera-sensor-oneli-evt1.dtbo \
 	cape-camera-sensor-oneli-dvt1b.dtbo
 endif  #($(CONFIG_ONELI_DTB),y)
+ifeq ($(CONFIG_ZEEKR_DTB),y)
+dtbo-$(CONFIG_ARCH_CAPE) += \
+	cape-camera-sensor-zeekr-evb.dtbo
+endif  #($(CONFIG_ZEEKR_DTB),y)
 ifeq ($(CONFIG_FELIX_DTB),y)
 dtbo-$(CONFIG_ARCH_CAPE) += \
-	cape-camera-sensor-oneli-dvt1b.dtbo
+	cape-camera-sensor-felix-evt1.dtbo
 endif  #($(CONFIG_FELIX_DTB),y)
 endif  #($(CONFIG_MMI_DEVICE_DTBS),y)

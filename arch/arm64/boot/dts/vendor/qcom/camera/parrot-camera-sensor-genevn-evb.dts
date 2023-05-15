@@ -7,10 +7,10 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
 
-#include "parrot-camera.dtsi"
+#include "parrot-camera-sensor-genevn-common.dtsi"
 / {
-	model = "Qualcomm Technologies, Inc. Parrot v1 SoC";
-	compatible = "qcom,parrot";
+	model = "genevn";
+	compatible = "qcom,parrot-qrd", "qcom,parrot", "qcom,qrd", "moto,genevn";
 	qcom,msm-id = <537 0x10000>;
-	qcom,board-id = <0 0>, <0 0x600>;
+	qcom,board-id = <0x41 0x9000>, <0x41 0xB100>;
 };

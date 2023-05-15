@@ -66,15 +66,15 @@
 &soc {
 	mot,cam-actuator {
 		compatible = "mot,actuator";
-		clock-cntl-level = "nominal";
-		clock-names = "cam_clk";
-		clock-rates = <19200000>;
-		clocks = <&clock_camcc CAM_CC_MCLK2_CLK>;
+		gpio-no-mux = <0>;
+		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk2_active>;
 		pinctrl-1 = <&cam_sensor_mclk2_suspend>;
-		pinctrl-names = "cam_default", "cam_suspend";
 		use-shared-clk = "true";
-		gpio-no-mux = <0x0>;
+		clocks = <&clock_camcc CAM_CC_MCLK2_CLK>;
+		clock-names = "cam_clk";
+		clock-cntl-level = "nominal";
+		clock-rates = <19200000>;
 		status = "ok";
 	};
 
@@ -217,25 +217,20 @@
 		cam_vdig-supply = <&camera_ldo1>;
 		cam_clk-supply = <&cam_cc_titan_top_gdsc>;
 		cam_vana-supply = <&camera_ldo3>;
-		regulator-names = "cam_vio", "cam_vdig",
-			"cam_clk", "cam_vana";
+		regulator-names = "cam_vio", "cam_vdig", "cam_clk", "cam_vana";
 		rgltr-cntrl-support;
 		rgltr-min-voltage = <1800000 1000000 0 2200000>;
 		rgltr-max-voltage = <1800000 1000000 0 2200000>;
 		rgltr-load-current = <3000 675000 0 112000>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
-		pinctrl-0 = <&cam_sensor_mclk2_active
-			&cam_sensor_active_rst2>;
-		pinctrl-1 = <&cam_sensor_mclk2_suspend
-			&cam_sensor_suspend_rst2>;
-		gpios = <&tlmm 102 0>,
-			<&tlmm 117 0>;
+		pinctrl-0 = <&cam_sensor_mclk2_active	&cam_sensor_active_rst2>;
+		pinctrl-1 = <&cam_sensor_mclk2_suspend	&cam_sensor_suspend_rst2>;
+		gpios = <&tlmm 102 0>, <&tlmm 117 0>;
 		gpio-reset = <1>;
 		gpio-req-tbl-num = <0 1>;
 		gpio-req-tbl-flags = <1 0>;
-		gpio-req-tbl-label = "CAMIF_MCLK2",
-					"CAM_RESET2";
+		gpio-req-tbl-label = "CAMIF_MCLK2", "CAM_RESET2";
 		cci-master = <0>;
 		clocks = <&clock_camcc CAM_CC_MCLK2_CLK>;
 		clock-names = "cam_clk";
@@ -261,25 +256,20 @@
 		cam_vana-supply = <&camera_ldo3>;
 		cam_vaf-supply = <&camera_ldo7>;
 		cam_v_custom1-supply = <&L3C>;
-		regulator-names = "cam_vio", "cam_vdig",
-			"cam_clk", "cam_vana", "cam_vaf", "cam_v_custom1";
+		regulator-names = "cam_vio", "cam_vdig", "cam_clk", "cam_vana", "cam_vaf", "cam_v_custom1";
 		rgltr-cntrl-support;
 		rgltr-min-voltage = <1800000 1000000 0 2200000 3100000 3100000>;
 		rgltr-max-voltage = <1800000 1000000 0 2200000 3104000 3104000>;
 		rgltr-load-current = <3000 675000 0 112000 15000 15000>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
-		pinctrl-0 = <&cam_sensor_mclk2_active
-			&cam_sensor_active_rst2>;
-		pinctrl-1 = <&cam_sensor_mclk2_suspend
-			&cam_sensor_suspend_rst2>;
-		gpios = <&tlmm 102 0>,
-			<&tlmm 117 0>;
+		pinctrl-0 = <&cam_sensor_mclk2_active	&cam_sensor_active_rst2>;
+		pinctrl-1 = <&cam_sensor_mclk2_suspend	&cam_sensor_suspend_rst2>;
+		gpios = <&tlmm 102 0>, <&tlmm 117 0>;
 		gpio-reset = <1>;
 		gpio-req-tbl-num = <0 1>;
 		gpio-req-tbl-flags = <1 0>;
-		gpio-req-tbl-label = "CAMIF_MCLK2",
-					"CAM_RESET2";
+		gpio-req-tbl-label = "CAMIF_MCLK2", "CAM_RESET2";
 		cci-master = <0>;
 		clocks = <&clock_camcc CAM_CC_MCLK2_CLK>;
 		clock-names = "cam_clk";
@@ -328,25 +318,20 @@
 		cam_clk-supply = <&cam_cc_titan_top_gdsc>;
 		cam_vana-supply = <&cam_avdd_tele>;
 		cam_vdig-supply = <&camera_ldo2>;
-		regulator-names = "cam_vio", "cam_vana",
-			"cam_vdig", "cam_clk";
+		regulator-names = "cam_vio", "cam_vana", "cam_vdig", "cam_clk";
 		rgltr-cntrl-support;
 		rgltr-min-voltage = <1800000 2800000 1056000 0>;
 		rgltr-max-voltage = <1800000 2800000 1056000 0>;
 		rgltr-load-current = <3300 159000 79000 0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
-		pinctrl-0 = <&cam_sensor_mclk1_active
-			&cam_sensor_active_rst1>;
-		pinctrl-1 = <&cam_sensor_mclk1_suspend
-			&cam_sensor_suspend_rst1>;
-		gpios = <&tlmm 101 0>,
-			<&tlmm 24 0>;
+		pinctrl-0 = <&cam_sensor_mclk1_active	&cam_sensor_active_rst1>;
+		pinctrl-1 = <&cam_sensor_mclk1_suspend	&cam_sensor_suspend_rst1>;
+		gpios = <&tlmm 101 0>, <&tlmm 24 0>;
 		gpio-reset = <1>;
 		gpio-req-tbl-num = <0 1>;
 		gpio-req-tbl-flags = <1 0>;
-		gpio-req-tbl-label = "CAMIF_MCLK1",
-			"CAM_RESET1";
+		gpio-req-tbl-label = "CAMIF_MCLK1", "CAM_RESET1";
 		cci-master = <1>;
 		clocks = <&clock_camcc CAM_CC_MCLK1_CLK>;
 		clock-names = "cam_clk";
@@ -382,25 +367,20 @@
 		cam_vdig-supply = <&cam_dvdd_front>;
 		cam_clk-supply = <&cam_cc_titan_top_gdsc>;
 		cam_vana-supply = <&cam_avdd_front>;
-		regulator-names = "cam_vio", "cam_vdig",
-			"cam_clk", "cam_vana";
+		regulator-names = "cam_vio", "cam_vdig", "cam_clk", "cam_vana";
 		rgltr-cntrl-support;
 		rgltr-min-voltage = <1800000 1100000 0 2800000>;
 		rgltr-max-voltage = <1800000 1100000 0 2800000>;
 		rgltr-load-current = <3000 125000 0 95000>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
-		pinctrl-0 = <&cam_sensor_mclk4_active
-			&cam_sensor_active_rst6>;
-		pinctrl-1 = <&cam_sensor_mclk4_suspend
-			&cam_sensor_suspend_rst6>;
-		gpios = <&tlmm 104 0>,
-			<&tlmm 108 0>;
+		pinctrl-0 = <&cam_sensor_mclk4_active	&cam_sensor_active_rst6>;
+		pinctrl-1 = <&cam_sensor_mclk4_suspend	&cam_sensor_suspend_rst6>;
+		gpios = <&tlmm 104 0>,	<&tlmm 108 0>;
 		gpio-reset = <1>;
 		gpio-req-tbl-num = <0 1>;
 		gpio-req-tbl-flags = <1 0>;
-		gpio-req-tbl-label = "CAMIF_MCLK4",
-					"CAM_RESET4";
+		gpio-req-tbl-label = "CAMIF_MCLK4",	"CAM_RESET4";
 		cci-master = <1>;
 		clocks = <&clock_camcc CAM_CC_MCLK4_CLK>;
 		clock-names = "cam_clk";
@@ -449,25 +429,20 @@
 		cam_clk-supply = <&cam_cc_titan_top_gdsc>;
 		cam_vana-supply = <&camera_ldo4>;
 		cam_vdig-supply = <&camera_ldo2>;
-		regulator-names = "cam_vio", "cam_vana",
-			"cam_vdig", "cam_clk";
+		regulator-names = "cam_vio", "cam_vana", "cam_vdig", "cam_clk";
 		rgltr-cntrl-support;
 		rgltr-min-voltage = <1800000 2800000 1056000 0>;
 		rgltr-max-voltage = <1800000 2800000 1056000 0>;
 		rgltr-load-current = <3000 148000 212000 0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
-		pinctrl-0 = <&cam_sensor_mclk3_active
-			&cam_sensor_active_rst3>;
-		pinctrl-1 = <&cam_sensor_mclk3_suspend
-			&cam_sensor_suspend_rst3>;
-		gpios = <&tlmm 103 0>,
-			<&tlmm 120 0>;
+		pinctrl-0 = <&cam_sensor_mclk3_active	&cam_sensor_active_rst3>;
+		pinctrl-1 = <&cam_sensor_mclk3_suspend	&cam_sensor_suspend_rst3>;
+		gpios = <&tlmm 103 0>, <&tlmm 120 0>;
 		gpio-reset = <1>;
 		gpio-req-tbl-num = <0 1>;
 		gpio-req-tbl-flags = <1 0>;
-		gpio-req-tbl-label = "CAMIF_MCLK3",
-			"CAM_RESET3";
+		gpio-req-tbl-label = "CAMIF_MCLK3", "CAM_RESET3";
 		cci-master = <0>;
 		clocks = <&clock_camcc CAM_CC_MCLK3_CLK>;
 		clock-names = "cam_clk";
