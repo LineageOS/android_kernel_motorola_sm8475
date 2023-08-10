@@ -1,3 +1,4 @@
+DTC_INCLUDE += $(srctree)/techpack/audio/include
 
 #remove useless qcom device tree in moto build
 ifneq ($(CONFIG_MMI_DEVICE_DTBS),y)
