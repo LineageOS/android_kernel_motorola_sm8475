@@ -3,6 +3,8 @@ dtbo-$(CONFIG_ARCH_PARROT) := parrot-camera.dtbo
 ifneq ($(CONFIG_MMI_DEVICE_DTBS),y)
 dtbo-$(CONFIG_ARCH_PARROT) += parrot-camera-sensor-idp.dtbo
 dtbo-$(CONFIG_ARCH_PARROT) += parrot-camera-sensor-qrd.dtbo
+
+dtbo-$(CONFIG_ARCH_RAVELIN) += raveline-camera.dtbo
 else
 ifeq ($(CONFIG_GENEVA_DTB),y)
 dtbo-$(CONFIG_ARCH_PARROT) += parrot-camera-sensor-geneva-evb.dtbo

@@ -173,6 +173,11 @@
 		status = "ok";
 	};
 
+	mot,cam-actuator {
+		compatible = "mot,actuator";
+		status = "ok";
+	};
+
 	cam_avdd_main: gpio-regulator@0 {
 		compatible = "regulator-fixed";
 		reg = <0x00 0x00>;
@@ -443,6 +448,7 @@
                 rgltr-max-voltage = <2800000 1800000>;
                 rgltr-load-current = <119000 0>;
                 status = "ok";
+                multi-user-support;
 	};
 
 	eeprom_rear_uw: qcom,eeprom@2 {
