@@ -52,8 +52,8 @@
 					&gem_noc SLAVE_LLCC>;
 		/* Bus BW range (low, high) for each bus */
 		qcom,bus-range-kbps = <1000 1000
-					1000 15000000
-					1000 15000000>;
+					1000 10000000
+					1000 10000000>;
 		/* MMUs */
 		non_secure_cb {
 			compatible = "qcom,msm-vidc,context-bank";

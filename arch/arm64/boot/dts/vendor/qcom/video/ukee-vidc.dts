@@ -8,12 +8,12 @@
 #include "waipio-vidc.dtsi"
 
 / {
-	model = "Qualcomm Technologies, Inc. waipio/cape/ukee v1 SoC";
-	compatible = "qcom,waipio", "qcom,cape", "qcom,ukee";
-	qcom,msm-id = <457 0x10000>, <482 0x10000>,
-			<457 0x20000>, <482 0x20000>,
-			<530 0x10000>, <531 0x10000>,
-			<540 0x10000>, <552 0x10000>,
-			<591 0x10000>;
+	model = "Qualcomm Technologies, Inc. ukee v1 SoC";
+	compatible = "qcom,ukee";
+	qcom,msm-id = <591 0x10000>;
 	qcom,board-id = <0 0>;
+};
+
+&msm_vidc {
+	compatible = "qcom,msm-vidc", "qcom,msm-vidc-waipio", "qcom,msm-vidc-iris2", "qcom,msm-vidc-ukee";
 };
