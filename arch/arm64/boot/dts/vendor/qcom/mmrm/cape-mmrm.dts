@@ -7,8 +7,8 @@
 #include "cape-mmrm.dtsi"
 
 / {
-	model = "Qualcomm Technologies, Inc. Cape SoC";
-	compatible = "qcom,cape";
-	qcom,msm-id = <530 0x10000>, <531 0x10000>, <540 0x10000>;
+	model = "Qualcomm Technologies, Inc. Cape/Ukee SoC";
+	compatible = "qcom,cape", "qcom,ukee";
+	qcom,msm-id = <530 0x10000>, <531 0x10000>, <540 0x10000>, <591 0x10000>;
 	qcom,board-id = <0 0>; /* required by merge_dtbs.py */
 };
