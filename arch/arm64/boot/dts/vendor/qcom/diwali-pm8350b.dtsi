@@ -1,6 +1,8 @@
 #include <dt-bindings/clock/qcom,rpmh.h>
 #include <dt-bindings/thermal/thermal_qti.h>
-#include "pm7250b.dtsi"
+#include <dt-bindings/iio/qcom,spmi-adc7-pm8350b.h>
+#include <dt-bindings/iio/qcom,spmi-adc7-smb139x.h>
+#include "pm8350b.dtsi"
 
 &soc {
 	qcom,pmic_glink {
@@ -31,9 +33,9 @@
 				#address-cells = <2>;
 				#size-cells = <0>;
 
-				qcom,pm7250b-debug@8 {
+				qcom,pm8350b-debug@3 {
 					compatible = "qcom,spmi-pmic";
-					reg = <8 SPMI_USID>;
+					reg = <3 SPMI_USID>;
 					qcom,can-sleep;
 				};
 			};
@@ -56,13 +58,24 @@
 					qcom,can-sleep;
 				};
 
-				qcom,smb1394-debug@c {
+				qcom,smb1394-debug@d {
 					compatible = "qcom,spmi-pmic";
 					reg = <12 SPMI_USID>;
 					qcom,can-sleep;
 				};
 			};
 		};
+	};
+};
+
+&spmi0_debug_bus {
+	depends-on2-supply = <&smb1394_glink_debug>;
+	qcom,pm8350b-debug@3 {
+		compatible = "qcom,spmi-pmic";
+		reg = <3 SPMI_USID>;
+		#address-cells = <2>;
+		#size-cells = <0>;
+		qcom,can-sleep;
 	};
 };
 
@@ -91,77 +104,137 @@
 	status = "okay";
 };
 
-&spmi0_debug_bus {
-	depends-on2-supply = <&smb1394_glink_debug>;
-
-	qcom,pm7250b-debug@8 {
-		compatible = "qcom,spmi-pmic";
-		reg = <8 SPMI_USID>;
-		#address-cells = <2>;
-		#size-cells = <0>;
-		qcom,can-sleep;
+&pmk8350_vadc {
+	pm8350b_ref_gnd {
+		reg = <PM8350B_ADC7_REF_GND>;
+		label = "pm8350b_ref_gnd";
+		qcom,pre-scaling = <1 1>;
 	};
 
-	qcom,pm7250b-debug@9 {
-		compatible = "qcom,spmi-pmic";
-		reg = <9 SPMI_USID>;
-		#address-cells = <2>;
-		#size-cells = <0>;
-		qcom,can-sleep;
-	};
-};
-
-&pm7250b_2 {
-	/* Slave ID - 8 */
-	reg = <8 SPMI_USID>;
-};
-
-&pm7250b_3 {
-	/* Slave ID - 9 */
-	reg = <9 SPMI_USID>;
-};
-
-&pm7250b_clkdiv {
-	clocks = <&rpmhcc RPMH_CXO_CLK>;
-};
-
-&pm7250b_vadc {
-	interrupts = <0x8 0x31 0x0 IRQ_TYPE_EDGE_RISING>;
-
-	smb1390_therm@e {
-		qcom,scale-fn-type = <ADC_SCALE_HW_CALIB_PM5_SMB1398_TEMP>;
+	pm8350b_vref_1p25 {
+		reg = <PM8350B_ADC7_1P25VREF>;
+		label = "pm8350b_vref_1p25";
+		qcom,pre-scaling = <1 1>;
 	};
 
-	pm7250b_usb_conn_therm {
-		reg = <ADC5_AMUX_THM3_100K_PU>;
-		label = "pm7250b_usb_conn_therm";
+	pm8350b_die_temp {
+		reg = <PM8350B_ADC7_DIE_TEMP>;
+		label = "pm8350b_die_temp";
+		qcom,pre-scaling = <1 1>;
+	};
+
+	pm8350b_vph_pwr {
+		reg = <PM8350B_ADC7_VPH_PWR>;
+		label = "pm8350b_vph_pwr";
+		qcom,pre-scaling = <1 3>;
+	};
+
+	pm8350b_vbat_sns {
+		reg = <PM8350B_ADC7_VBAT_SNS>;
+		label = "pm8350b_vbat_sns";
+		qcom,pre-scaling = <1 3>;
+	};
+
+	pm8350b_usb_conn_therm {
+		reg = <PM8350B_ADC7_AMUX_THM4_100K_PU>;
+		label = "pm8350b_usb_conn_therm";
 		qcom,ratiometric;
 		qcom,hw-settle-time = <200>;
 		qcom,pre-scaling = <1 1>;
 	};
 
-	pm7250b_smb_skin_therm {
-		reg = <ADC5_AMUX_THM1_100K_PU>;
-		label = "pm7250b_smb_skin_therm";
+	pm8350b_chg_skin_therm {
+		reg = <PM8350B_ADC7_GPIO2_100K_PU>;
+		label = "pm8350b_chg_skin_therm";
 		qcom,ratiometric;
 		qcom,hw-settle-time = <200>;
 		qcom,pre-scaling = <1 1>;
 	};
+
+	pm8350b_chg_temp {
+		reg = <PM8350B_ADC7_CHG_TEMP>;
+		label = "pm8350b_chg_temp";
+		qcom,pre-scaling = <1 1>;
+	};
+
+	pm8350b_iin_fb {
+		reg = <PM8350B_ADC7_IIN_FB>;
+		label = "pm8350b_iin_fb";
+		qcom,pre-scaling = <32 100>;
+	};
+
+	pm8350b_ichg_fb {
+		reg = <PM8350B_ADC7_ICHG_FB>;
+		label = "pm8350b_ichg_fb";
+		qcom,pre-scaling = <1000 305185>;
+	};
+
+	smb139x_1_smb_temp {
+		reg = <SMB139x_1_ADC7_SMB_TEMP>;
+		label = "smb139x_1_smb_temp";
+		qcom,pre-scaling = <1 1>;
+	};
+
+	smb139x_2_smb_temp {
+		reg = <SMB139x_2_ADC7_SMB_TEMP>;
+		label = "smb139x_2_smb_temp";
+		qcom,pre-scaling = <1 1>;
+	};
+
+	smb139x_1_iin_smb {
+		reg = <SMB139x_1_ADC7_IIN_SMB>;
+		label = "smb139x_1_iin_smb";
+		qcom,pre-scaling = <32 100>;
+	};
+
+	smb139x_2_iin_smb {
+		reg = <SMB139x_2_ADC7_IIN_SMB>;
+		label = "smb139x_2_iin_smb";
+		qcom,pre-scaling = <32 100>;
+	};
+
+	smb139x_1_ichg_smb {
+		reg = <SMB139x_1_ADC7_ICHG_SMB>;
+		label = "smb139x_1_ichg_smb";
+		qcom,pre-scaling = <16 100>;
+	};
+
+	smb139x_1_ichg_smb_pt {
+		reg = <SMB139x_1_ADC7_ICHG_SMB>;
+		label = "smb139x_1_ichg_smb_pt";
+		qcom,pre-scaling = <32 100>;
+	};
+
+	smb139x_2_ichg_smb {
+		reg = <SMB139x_2_ADC7_ICHG_SMB>;
+		label = "smb139x_2_ichg_smb";
+		qcom,pre-scaling = <16 100>;
+	};
+
+	smb139x_2_ichg_smb_pt {
+		reg = <SMB139x_2_ADC7_ICHG_SMB>;
+		label = "smb139x_2_ichg_smb_pt";
+		qcom,pre-scaling = <32 100>;
+	};
 };
 
-&pm7250b_adc_tm {
-	interrupts = <0x8 0x35 0x0 IRQ_TYPE_EDGE_RISING>;
-	io-channels = <&pm7250b_vadc ADC5_AMUX_THM3_100K_PU>,
-			<&pm7250b_vadc ADC5_AMUX_THM1_100K_PU>;
+&pmk8350_adc_tm {
+	io-channels = <&pmk8350_vadc PM8350_ADC7_AMUX_THM1_100K_PU>,
+			<&pmk8350_vadc PM8350_ADC7_AMUX_THM2_100K_PU>,
+			<&pmk8350_vadc PM8350_ADC7_AMUX_THM3_100K_PU>,
+			<&pmk8350_vadc PM8350_ADC7_AMUX_THM4_100K_PU>,
+			<&pmk8350_vadc PMK8350_ADC7_AMUX_THM1_100K_PU>,
+			<&pmk8350_vadc PM8350B_ADC7_AMUX_THM4_100K_PU>,
+			<&pmk8350_vadc PM8350B_ADC7_GPIO2_100K_PU>;
 
-	pm7250b_usb_conn_therm {
-		reg = <ADC5_AMUX_THM3_100K_PU>;
+	pm8350b_usb_conn_therm {
+		reg = <PM8350B_ADC7_AMUX_THM4_100K_PU>;
 		qcom,ratiometric;
 		qcom,hw-settle-time = <200>;
 	};
 
-	pm7250b_smb_skin_therm {
-		reg = <ADC5_AMUX_THM1_100K_PU>;
+	pm8350b_chg_skin_therm {
+		reg = <PM8350B_ADC7_GPIO2_100K_PU>;
 		qcom,ratiometric;
 		qcom,hw-settle-time = <200>;
 	};
@@ -172,7 +245,7 @@
 		cooling-maps {
 			socd_apc1 {
 				trip = <&socd_trip>;
-				cooling-device = <&cpu7_pause 1 1>;
+				cooling-device = <&APC1_pause 1 1>;
 			};
 
 			socd_cdsp1 {
@@ -187,23 +260,8 @@
 		};
 	};
 
-	pm7250b-ibat-lvl0 {
-		trips {
-			ibat-lvl0 {
-				temperature = <6000>;
-			};
-		};
-	};
 
-	pm7250b-ibat-lvl1 {
-		trips {
-			ibat-lvl1 {
-				temperature = <7500>;
-			};
-		};
-	};
-
-	pm7250b-bcl-lvl0 {
+	pm8350b-bcl-lvl0 {
 		cooling-maps {
 			vbat_lte0 {
 				trip = <&b_bcl_lvl0>;
@@ -237,7 +295,7 @@
 		};
 	};
 
-	pm7250b-bcl-lvl1 {
+	pm8350b-bcl-lvl1 {
 		cooling-maps {
 			vbat_lte1 {
 				trip = <&b_bcl_lvl1>;
@@ -271,7 +329,7 @@
 		};
 	};
 
-	pm7250b-bcl-lvl2 {
+	pm8350b-bcl-lvl2 {
 		cooling-maps {
 			vbat_cdsp2 {
 				trip = <&b_bcl_lvl2>;
@@ -285,10 +343,10 @@
 		};
 	};
 
-	sys-therm-7 {
+	conn-therm {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
-		thermal-sensors =  <&pm7250b_adc_tm ADC5_AMUX_THM3_100K_PU>;
+		thermal-sensors =  <&pmk8350_adc_tm PM8350B_ADC7_AMUX_THM4_100K_PU>;
 		trips {
 			active-config0 {
 				temperature = <125000>;
@@ -304,10 +362,10 @@
 		};
 	};
 
-	sys-therm-6 {
+	chg-skin-therm {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
-		thermal-sensors =  <&pm7250b_adc_tm ADC5_AMUX_THM1_100K_PU>;
+		thermal-sensors = <&pmk8350_adc_tm PM8350B_ADC7_GPIO2_100K_PU>;
 		trips {
 			active-config0 {
 				temperature = <125000>;
@@ -324,26 +382,7 @@
 	};
 };
 
-
-&pm7250b_tz {
-	interrupts = <0x8 0x24 0x0 IRQ_TYPE_EDGE_BOTH>;
-};
-
-&pm7250b_bcl {
-	interrupts = <0x8 0x1d 0x0 IRQ_TYPE_EDGE_RISING>,
-		   <0x8 0x1d 0x1 IRQ_TYPE_EDGE_RISING>,
-		   <0x8 0x1d 0x2 IRQ_TYPE_EDGE_RISING>;
-};
-
-/* Below peripherals are supported over ADSP Glink */
-&pm7250b_charger {
-	status = "disabled";
-};
-
-&pm7250b_qg {
-	status = "disabled";
-};
-
-&pm7250b_pdphy {
-	status = "disabled";
+&pm8350b_tz {
+	io-channels = <&pmk8350_vadc PM8350B_ADC7_DIE_TEMP>;
+	io-channel-names = "thermal";
 };

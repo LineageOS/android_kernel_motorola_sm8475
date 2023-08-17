@@ -12,41 +12,20 @@
  */
 #include <dt-bindings/clock/qcom,rpmh.h>
 
-&apps_rsc {
-	rpmh-regulator-ldoc11 {
-		compatible = "qcom,rpmh-vrm-regulator";
-		qcom,resource-name = "ldoc11";
-		qcom,regulator-type = "pmic5-ldo";
-		qcom,supported-modes =
-			<RPMH_REGULATOR_MODE_LPM
-			RPMH_REGULATOR_MODE_HPM>;
-		qcom,mode-threshold-currents = <0 10000>;
-		L11C:
-		pm8350c_l11: regulator-pm8350c-l11 {
-			regulator-name = "pm8350c_l11";
-			qcom,set = <RPMH_REGULATOR_SET_ALL>;
-			regulator-min-microvolt = <3000000>;
-			regulator-max-microvolt = <3000000>;
-			qcom,init-voltage = <3000000>;
-			qcom,init-mode = <RPMH_REGULATOR_MODE_HPM>;
-		};
-	};
-};
-
-&qupv3_se4_i2c {
+&qupv3_se0_i2c {
 	status = "disabled";
 };
 
-&aliases {
-    spi1 = "/soc/spi@990000";
-    spi2 = "/soc/spi@884000";
+&pm8350c_l3 {
+	regulator-min-microvolt = <3000000>;
+	regulator-max-microvolt = <3304000>;
+	qcom,init-voltage = <3300000>;
 };
 
-&qupv3_se4_spi {
+&qupv3_se0_spi {
 	#address-cells = <1>;
 	#size-cells = <0>;
 
-	qcom,disable-autosuspend;
 	status = "ok";
 
 	goodix-berlin@0 {
@@ -55,35 +34,29 @@
 		reg = <0>;
 		spi-max-frequency = <15000000>;
 
-		goodix,reset-gpio = <&tlmm 20 0x0>;
-		goodix,irq-gpio = <&tlmm 21 0x2002>;
+		goodix,reset-gpio = <&tlmm 17 0x0>;
+		goodix,irq-gpio = <&tlmm 51 0x2002>;
+		goodix,iovdd-gpio = <&tlmm 146 0x0>;
 		goodix,irq-flags = <0x2002>; /* 1:trigger rising, 2:trigger falling;*/
 		goodix,panel-max-id = <10>;
 		goodix,panel-max-x = <17280>;
 		goodix,panel-max-y = <42240>;
 		goodix,panel-max-w = <255>;
 		goodix,panel-max-p = <4096>;
-		goodix,avdd-name = "pm8350c_l11";
-		goodix,iovdd-name = "pm8350c_l12";
+		goodix,avdd-name = "pm8350c_l3";
 		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend", "pmx_ts_release";
 		pinctrl-0 = <&ts_active>;
 		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
 		pinctrl-2 = <&ts_release>;
-		mmi,power-off-suspend;
-		mmi,usb-charger-detection;
-		mmi,enable-gestures;
-		mmi,supported_gesture_type = <0x06>;
-		mmi,enable-palm;
-
-		goodix,gesture-wait-pm;
-		goodix,edge-ctrl;
-		goodix,interpolation-ctrl;
-		goodix,sample-ctrl;
 	};
 };
 
-&qupv3_se16_i2c {
+&qupv3_se1_spi {
 	status = "disabled";
+};
+
+&aliases {
+	spi1 = "/soc/spi@980000";
 };
 
 /* CLI touchscreen pins */
@@ -91,12 +64,12 @@
 	cli_pmx_ts_active {
 		cli_ts_active: cli_ts_active {
 			mux {
-				pins = "gpio85", "gpio126";
+				pins = "gpio27", "gpio152";
 				function = "gpio";
 			};
 
 			config {
-				pins = "gpio85", "gpio126";
+				pins = "gpio27", "gpio152";
 				drive-strength = <8>;
 				bias-pull-up;
 			};
@@ -106,12 +79,12 @@
 	cli_pmx_ts_reset_suspend {
 		cli_ts_reset_suspend: cli_ts_reset_suspend {
 			mux {
-				pins = "gpio126";
+				pins = "gpio27";
 				function = "gpio";
 			};
 
 			config {
-				pins = "gpio126";
+				pins = "gpio27";
 				drive-strength = <2>;
 				bias-pull-down;
 			};
@@ -121,12 +94,12 @@
 	cli_pmx_ts_int_suspend {
 		cli_ts_int_suspend: cli_ts_int_suspend {
 			mux {
-				pins = "gpio85";
+				pins = "gpio152";
 				function = "gpio";
 			};
 
 			config {
-				pins = "gpio85";
+				pins = "gpio152";
 				drive-strength = <2>;
 				bias-pull-down;
 			};
@@ -136,12 +109,12 @@
 	cli_pmx_ts_release {
 		cli_ts_release: cli_ts_release {
 			mux {
-				pins = "gpio85", "gpio126";
+				pins = "gpio27", "gpio152";
 				function = "gpio";
 			};
 
 			config {
-				pins = "gpio85", "gpio126";
+				pins = "gpio27", "gpio152";
 				drive-strength = <2>;
 				bias-disable;
 			};
@@ -149,38 +122,37 @@
 	};
 };
 
-&qupv3_se16_spi {
+&qupv3_se1_i2c {
 	#address-cells = <1>;
 	#size-cells = <0>;
 
-	qcom,disable-autosuspend;
 	status = "ok";
 
-	focaltech@1 {
-		compatible = "focaltech,fts";
-		reg = <1>;
-		spi-max-frequency = <12000000>;
+	bt541_ts_device@20 {
+		compatible = "zinitix,bt541_ts_device";
+		reg = <0x20>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <152 0x2008>;
+		zinitix,avdd-name = "pm8350c_l6";
 		mmi,control-dsi = <1>;
 		mmi,class-entry-name = "secondary";
-
-		interrupt-parent = <&tlmm>;
-		interrupts = <85 0x2>;
-		focaltech,reset-gpio = <&tlmm 126 0x0>;
-		focaltech,irq-gpio = <&tlmm 85 0x2800>;
-		focaltech,max-touch-number = <10>;
-		focaltech,display-coords =  <0 0 16896 17056>;
-		vdd-supply=<&pm8350c_l3>;
-		vcc_i2c-supply=<&pm8350c_l2>;
+		ic_name = "zinitix,ztw622";
 
 		pinctrl-names = "cli_pmx_ts_active","cli_pmx_ts_suspend","cli_pmx_ts_release";
 		pinctrl-0 = <&cli_ts_active>;
 		pinctrl-1 = <&cli_ts_int_suspend &cli_ts_reset_suspend>;
 		pinctrl-2 = <&cli_ts_release>;
 
+		zinitix,reset-gpio = <&tlmm 27 0x0>;
+		zinitix,irq-gpio = <&tlmm 152 0x2008>;
+		zinitix,iovdd-gpio = <&tlmm 148 0x0>;
+		zinitix,x_resolution = <194>;
+		zinitix,y_resolution = <368>;
+		zinitix,page_size = <128>;
+		zinitix,orientation = <0>;
+		zinitix,tsp_vdd_supply_type = <1>;
+		zinitix,pname = "SM-G5308W";
+
 		mmi,power-off-suspend;
-		mmi,usb-charger-detection;
-		mmi,cli-enable-gestures;
-		mmi,supported_gesture_type = <0x06>;
-		fts,pocket-mode-ctrl;
-    };
+	};
 };

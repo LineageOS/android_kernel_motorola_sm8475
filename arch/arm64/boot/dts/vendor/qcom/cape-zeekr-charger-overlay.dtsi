@@ -100,7 +100,10 @@
 		ichg-microamp = <700000>;
 		vchg-microvolt = <4400000>;
 		input-current-limit-microamp = <1324000>;
-		wls-current-limit-microamp = <200000>;
+		input-voltage-limit-microvolt = <4500000>;
+		wls-ichg-limit-microamp = <240000>;
+		wls-input-current-limit-microamp = <240000>;
+		wls-input-voltage-limit-microvolt = <3900000>;
 
 		mmi,ext-usb-psy-name = "usb";
 		mmi,ext-wls-psy-name = "wireless";
@@ -119,8 +122,8 @@
 					<60 4200 810 0>;
 
 		mmi,paired-id = <0x00000001>;
-		mmi,paired-esr = <5>;
-		mmi,batt-esr = <5>;
+		mmi,paired-esr = <50>;
+		mmi,batt-esr = <150>;
 		// delta_ocv ichg map table
 		mmi,paired-ichg-table = <60 1324
 					 90 900
@@ -129,23 +132,25 @@
 		mmi,paired-load-thres = <800 400>;
 		mmi,low-load-en-gpio = <&pm8350b_gpios 1 GPIO_ACTIVE_HIGH>;	//gpio num base on hardware design
 		mmi,high-load-en-gpio = <&pm8350b_gpios 3 GPIO_ACTIVE_HIGH>;	//gpio num base on hardware design
-		mmi,thermal-mitigation = <1324000 1000000 800000 500000 300000>;
+		mmi,thermal-mitigation = <1324000 1000000 800000 500000 300000 100000>;
 	};
 };
 
 &mmi_charger {
 	mmi,pd-power-max = <30000>;
 	mmi,upper-limit-capacity = <80>;
+	mmi,ibat-calc-alignment-time = <1000>;
 };
 
 &battery_charger {
 	mmi,combo-batt-psy = <&mmi_charger>;
-	qcom,thermal-mitigation = <4675000 4000000 3500000 3000000 2500000 2000000 1000000 500000>;
+	qcom,thermal-mitigation = <4675000 4000000 3500000 3000000 2500000 2000000 1000000 500000 100000>;
 	qcom,wireless-fw-name = "cps4019.bin";
 };
 
 &qti_glink_charger {
 	mmi,main-battery-enabled;
+	mmi,partner_psy_name = "charger";
 	mmi,paired-id = <0x00010000>;
 	mmi,shutdown-empty-vbat-mv = <3000>;
 };

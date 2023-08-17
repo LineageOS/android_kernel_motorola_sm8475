@@ -11,12 +11,8 @@
  */
 
 &pm8350b_haptics {
-	qcom,vmax-mv = <1500>;
-	qcom,lra-period-us = <5845>;
-	qcom,lra-period-cal-count = <580>;
-	moto,lra-period-us-min = <5406>;
-	moto,lra-period-us-max = <6451>;
-	moto,cal_again;
+	qcom,vmax-mv = <1400>;
+	qcom,lra-period-us = <5880>;
 	status = "ok";
 	moto,wf-vmax-mv = <9000>;
 

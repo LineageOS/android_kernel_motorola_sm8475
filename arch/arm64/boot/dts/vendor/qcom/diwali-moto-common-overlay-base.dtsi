@@ -55,12 +55,30 @@
 			debounce-interval = <15>;
 			linux,can-disable;
 		};
+
 	};
+
+	qcom,pmic_glink_log {
+		qcom,charger_ulog_glink {
+			status = "disabled";
+		};
+		bm_adsp_ulog: qcom,bm_adsp_ulog {
+			compatible = "qcom,bm-adsp-ulog";
+			categories = <0xFFBFFFFF>;
+			level = <4>;
+			init-log-enabled;
+		};
+	};
+};
+
+&tlmm {
+	/* reserve FP GPIOs: gpio56,57,58,59 */
+	qcom,gpios-reserved = <32 33 34 35 56 57 58 59>;
 };
 
 &sdhc_2 {
 	status = "ok";
-	vdd-supply = <&L9C>;
+	//vdd-supply = <&L9C>;
 	qcom,vdd-voltage-level = <2960000 2960000>;
 	qcom,vdd-current-level = <0 800000>;
 
@@ -114,46 +132,6 @@
 	status = "ok";
 };
 
-&qupv3_se0_spi {
-	#address-cells = <1>;
-	#size-cells = <0>;
-
-	status = "ok";
-
-	qcom,spi-touch-active = "focaltech,fts_ts";
-	qcom,la-vm;
-
-	focaltech@0 {
-		compatible = "focaltech,fts_ts";
-		reg = <0x0>;
-		spi-max-frequency = <6000000>;
-		interrupt-parent = <&tlmm>;
-		interrupts = <51 0x2008>;
-		focaltech,reset-gpio = <&tlmm 17 0x00>;
-		focaltech,irq-gpio = <&tlmm 51 0x2008>;
-		focaltech,display-coords = <0 0 1080 2340>;
-		focaltech,max-touch-number = <5>;
-		focaltech,ic-type = <0x3658D488>;
-		focaltech,touch-type = "primary";
-
-		vdd-supply = <&L3C>;
-
-		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend", "pmx_ts_release";
-		pinctrl-0 = <&ts_active>;
-		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
-		pinctrl-2 = <&ts_release>;
-
-		focaltech,trusted-touch-mode = "vm_mode";
-		focaltech,touch-environment = "pvm";
-		focaltech,trusted-touch-type = "primary";
-		focaltech,trusted-touch-spi-irq = <566>;
-		focaltech,trusted-touch-io-bases = <0x980000 0x910000>;
-		focaltech,trusted-touch-io-sizes = <0x1000 0x4000>;
-		focaltech,trusted-touch-vm-gpio-list = <&tlmm 0 0 &tlmm 1 0 &tlmm 2 0
-						&tlmm 3 0 &tlmm 17 0 &tlmm 51 0x2008>;
-	};
-};
-
 &usb2_phy0 {
 	qcom,param-override-seq = <
 			/* override x0 */
@@ -166,27 +144,17 @@
 			0x03 0x78>;
 };
 
-&qupv3_se9_i2c {
-	status = "ok";
-	qcom,clk-freq-out = <1000000>;
-	#address-cells = <1>;
-	#size-cells = <0>;
-	nq@28 {
-		compatible = "qcom,sn-nci";
-		reg = <0x28>;
-		qcom,sn-irq = <&tlmm 41 0x00>;
-		qcom,sn-ven = <&tlmm 38 0x00>;
-		qcom,sn-firm = <&tlmm 40 0x00>;
-		qcom,sn-clkreq = <&tlmm 39 0x00>;
-		qcom,sn-vdd-1p8-supply = <&L18B>;
-		qcom,sn-vdd-1p8-voltage = <1800000 1800000>;
-		qcom,sn-vdd-1p8-current = <157000>;
-		interrupt-parent = <&tlmm>;
-		interrupts = <41 0>;
-		interrupt-names = "nfc_irq";
-		pinctrl-names = "nfc_active", "nfc_suspend";
-		pinctrl-0 = <&nfc_int_active &nfc_enable_active>;
-		pinctrl-1 = <&nfc_int_suspend &nfc_enable_suspend>;
+&pm8350c_rgb {
+	red {
+		label = "charging";
+	};
+
+	green {
+		status = "disabled";
+	};
+
+	blue {
+		status = "disabled";
 	};
 };
 
