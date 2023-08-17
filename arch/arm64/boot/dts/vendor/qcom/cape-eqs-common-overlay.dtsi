@@ -28,7 +28,6 @@
 #include "cape-eqs-haptics-overlay.dtsi"
 #include "display/display/cape-sde-display-eqs-common.dtsi"
 #include "camera/cape-camera-sensor-eqs-common-dvt1a.dtsi"
-#include "audio/cape-audio-eqs.dtsi"
 
 &tlmm {
 	redriver_enable: redriver_enable {
