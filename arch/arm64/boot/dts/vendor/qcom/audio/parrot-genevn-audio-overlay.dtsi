@@ -1,0 +1,193 @@
+&lpass_cdc {
+	qcom,num-macros = <3>;
+};
+
+&va_macro {
+	swr2: va_swr_master {
+		wcd938x_tx_slave: wcd938x-tx-slave {
+			status = "disabled";
+		};
+		wcd937x_tx_slave: wcd937x-tx-slave {
+			status = "okay";
+		};
+	};
+};
+
+&rx_macro {
+	swr1: rx_swr_master {
+		wcd938x_rx_slave: wcd938x-rx-slave {
+			status = "disabled";
+		};
+		wcd937x_rx_slave: wcd937x-rx-slave {
+			status = "okay";
+		};
+	};
+};
+
+&wcd937x_codec {
+	status = "okay";
+	qcom,cdc-micbias1-mv = <2800>;
+	qcom,cdc-micbias2-mv = <2800>;
+	qcom,cdc-micbias3-mv = <2800>;
+};
+
+&wcd937x_tx_slave {
+	status = "okay";
+};
+
+&wcd937x_rx_slave {
+	status = "okay";
+};
+
+&wcd938x_codec {
+	status = "disabled";
+};
+
+&wcd938x_rx_slave {
+	status = "disabled";
+};
+
+&wcd938x_tx_slave {
+	status = "disabled";
+};
+
+&wsa_macro {
+	status = "disabled";
+};
+
+&wsa_spkr_en1 {
+	status = "disabled";
+};
+
+&wsa_spkr_en2 {
+	status = "disabled";
+};
+
+&cdc_dmic01_gpios {
+	status = "disabled";
+};
+
+&cdc_dmic23_gpios {
+	status = "disabled";
+};
+
+&cdc_dmic45_gpios {
+	status = "disabled";
+};
+
+&cdc_dmic67_gpios {
+	status = "disabled";
+};
+
+&wsa883x_0221 {
+	status = "disabled";
+};
+
+&wsa883x_0222 {
+	status = "disabled";
+};
+
+&fsa4480 {
+	status = "disabled";
+};
+
+&qupv3_se2_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	aw882xxacf_spk: aw882xx_smartpa@34 { /* SPKR */
+		compatible = "awinic,aw882xx_smartpa";
+		reg = <0x34>;
+		irq-gpio = <&tlmm 106 0x2008>;
+		sound-channel = <1>; /*0:pri_l 1:pri_r 2:sec_l 3:sec_r*/
+		aw-re-min = <4000>;
+		aw-re-max= <30000>;
+		aw-cali-mode = "none";
+		monitor-mode = "hal_monitor";
+		status = "okay";
+	};
+	aw882xxacf_rcv: aw882xx_smartpa@35 { /* SPKL */
+		compatible = "awinic,aw882xx_smartpa";
+		reg = <0x35>;
+		irq-gpio = <&tlmm 105 0x2008>;
+		sound-channel = <0>; /*0:pri_l 1:pri_r 2:sec_l 3:sec_r*/
+		aw-re-min = <4000>;
+		aw-re-max= <30000>;
+		aw-cali-mode = "none";
+		monitor-mode = "hal_monitor";
+		status = "okay";
+	};
+};
+
+&spf_core_platform {
+	cdc_quin_mi2s_gpios:  quin_mi2s_pinctrl {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active","aud_sleep";
+		pinctrl-0 = <&lpi_i2s1_sck_active &lpi_i2s1_ws_sleep
+				&lpi_i2s1_sd0_active &lpi_i2s1_sd1_active>;
+		pinctrl-1 = <&lpi_i2s1_sck_sleep &lpi_i2s1_ws_sleep
+				&lpi_i2s1_sd0_sleep &lpi_i2s1_sd1_active>;
+		qcom,lpi-gpios;
+		#gpio-cells = <0>;
+	};
+};
+
+&waipio_snd {
+	qcom,model = "parrot-qrd-snd-card";
+	qcom,sku-model = "parrot-qrd-sku1-snd-card";
+	nvmem-cells = <&adsp_variant>;
+	nvmem-cell-names = "adsp_variant";
+	qcom,msm-mbhc-usbc-audio-supported = <0>;
+	qcom,msm-mbhc-hphl-swh = <1>;
+	qcom,msm-mbhc-gnd-swh = <1>;
+	qcom,mi2s-audio-intf = <1>;
+	qcom,quin-mi2s-gpios = <&cdc_quin_mi2s_gpios>;
+
+	qcom,audio-routing =
+		"AMIC1", "Analog Mic1",
+		"AMIC1", "MIC BIAS1",
+		"AMIC2", "Analog Mic2",
+		"AMIC2", "MIC BIAS2",
+		"AMIC3", "Analog Mic3",
+		"AMIC3", "MIC BIAS3",
+		"TX DMIC0", "Digital Mic0",
+		"TX DMIC0", "MIC BIAS3",
+		"TX DMIC1", "Digital Mic1",
+		"TX DMIC1", "MIC BIAS3",
+		"TX DMIC2", "Digital Mic2",
+		"TX DMIC2", "MIC BIAS1",
+		"TX DMIC3", "Digital Mic3",
+		"TX DMIC3", "MIC BIAS1",
+		"IN1_HPHL", "HPHL_OUT",
+		"IN2_HPHR", "HPHR_OUT",
+		"IN3_AUX", "AUX_OUT",
+		"RX_TX DEC0_INP", "TX DEC0 MUX",
+		"RX_TX DEC1_INP", "TX DEC1 MUX",
+		"RX_TX DEC2_INP", "TX DEC2 MUX",
+		"RX_TX DEC3_INP", "TX DEC3 MUX",
+		"TX SWR_INPUT", "WCD_TX_OUTPUT",
+		"VA SWR_INPUT", "VA_SWR_CLK",
+		"VA SWR_INPUT", "WCD_TX_OUTPUT",
+		"VA_AIF1 CAP", "VA_SWR_CLK",
+		"VA_AIF2 CAP", "VA_SWR_CLK",
+		"VA_AIF3 CAP", "VA_SWR_CLK",
+		"VA DMIC0", "Digital Mic0",
+		"VA DMIC1", "Digital Mic1",
+		"VA DMIC2", "Digital Mic2",
+		"VA DMIC3", "Digital Mic3",
+		"VA DMIC0", "VA MIC BIAS3",
+		"VA DMIC1", "VA MIC BIAS3",
+		"VA DMIC2", "VA MIC BIAS1",
+		"VA DMIC3", "VA MIC BIAS1";
+
+	/delete-property/ qcom,cdc-dmic01-gpios;
+	/delete-property/ qcom,cdc-dmic23-gpios;
+	/delete-property/ qcom,cdc-dmic45-gpios;
+	asoc-codec = <&stub_codec>, <&lpass_cdc>,
+		      <&wcd937x_codec>,
+		      <&aw882xxacf_spk>, <&aw882xxacf_rcv>;
+	asoc-codec-names = "msm-stub-codec.1", "lpass-cdc",
+			   "wcd937x_codec",
+			   "aw882xx_smartpa.0-0034", "aw882xx_smartpa.0-0035";
+	qcom,wsa-max-devs = <0>;
+};

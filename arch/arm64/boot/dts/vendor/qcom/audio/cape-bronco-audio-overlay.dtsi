@@ -1,0 +1,55 @@
+
+&spkr_2_sd_n_sleep {
+	mux {
+		pins = "gpio87";
+	};
+	config {
+		pins = "gpio87";
+	};
+};
+
+&spkr_2_sd_n_active {
+	mux {
+		pins = "gpio87";
+	};
+	config {
+		pins = "gpio87";
+	};
+};
+
+&fsa4480 {
+	status = "ok";
+};
+
+&waipio_snd {
+	qcom,msm-mbhc-usbc-audio-supported = <1>;
+	qcom,msm-mbhc-hphl-swh = <0>;
+	qcom,msm-mbhc-gnd-swh = <0>;
+};
+
+&usb3phy_portselect_default {
+	mux {
+		pins = "gpio91";
+		function = "usb_phy";
+	};
+
+	config {
+		pins = "gpio91";
+		bias-pull-down;
+		drive-strength = <2>;
+	};
+};
+
+&usb3phy_portselect_gpio {
+	mux {
+		pins = "gpio91";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio91";
+		drive-strength = <2>;
+		bias-pull-down;
+		input-enable;
+	};
+};

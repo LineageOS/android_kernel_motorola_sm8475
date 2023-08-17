@@ -560,7 +560,7 @@
 		pinctrl-1 = <&spkr_2_sd_n_sleep>;
 	};
 
-	wcd_rst_gpio: msm_cdc_pinctrl@54 {
+	wcd_rst_gpio: msm_cdc_pinctrl@102 {
 		compatible = "qcom,msm-cdc-pinctrl";
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&wcd_reset_active>;

@@ -1,0 +1,105 @@
+/dts-v1/;
+/plugin/;
+
+#include "waipio-audio-moto-hiphi-common.dtsi"
+ / {
+	model = "hiphic";
+	compatible = "qcom,waipio", "moto,hiphic";
+	qcom,msm-id = <457 0x10000>, <482 0x10000>;
+	qcom,board-id = <0x45 0x9100>, <0x45 0xA100>;
+};
+
+&spf_core_platform {
+	dmic23_en_gpio: dmic23_en_pinctrl {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&dmic23_en_active>;
+		pinctrl-1 = <&dmic23_en_sleep>;
+		qcom,tlmm-pins = <200>;
+		#gpio-cells = <0>;
+	};
+	dmic45_en_gpio: dmic45_en_pinctrl {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&dmic45_en_active>;
+		pinctrl-1 = <&dmic45_en_sleep>;
+		qcom,tlmm-pins = <201>;
+		#gpio-cells = <0>;
+	};
+};
+
+&tlmm {
+	dmic23_en_active: dmic23_en_active {
+		mux {
+			pins = "gpio200";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio200";
+			drive-strength = <16>;
+			bias-pull-up;
+			output-high;
+		};
+	};
+	dmic23_en_sleep: dmic23_en_sleep {
+		mux {
+			pins = "gpio200";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio200";
+			drive-strength = <2>;   /* 2 mA */
+			bias-pull-down;
+			input-enable;
+		};
+	};
+	dmic45_en_active: dmic45_en_active {
+		mux {
+			pins = "gpio201";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio201";
+			drive-strength = <16>;
+			bias-pull-up;
+			output-high;
+		};
+	};
+	dmic45_en_sleep: dmic45_en_sleep {
+		mux {
+			pins = "gpio201";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio201";
+			drive-strength = <2>;   /* 2 mA */
+			bias-pull-down;
+			input-enable;
+		};
+	};
+};
+
+
+&waipio_snd {
+	qcom,dmic23-en-gpio = <&dmic23_en_gpio>;
+	qcom,dmic45-en-gpio = <&dmic45_en_gpio>;
+
+	cdc-vdd-dmic1-supply = <&L6C>;
+	qcom,cdc-vdd-dmic1-voltage = <1800000 1800000>;
+	qcom,cdc-vdd-dmic1-current = <30000>;
+
+	cdc-vdd-dmic2-supply = <&S1C>;
+	qcom,cdc-vdd-dmic2-voltage = <1900000 2100000>;
+	qcom,cdc-vdd-dmic2-current = <30000>;
+
+	cdc-vdd-dmic3-supply = <&S1C>;
+	qcom,cdc-vdd-dmic3-voltage = <1900000 2100000>;
+	qcom,cdc-vdd-dmic3-current = <30000>;
+
+	qcom,cdc-static-supplies = "cdc-vdd-dmic1",
+			"cdc-vdd-dmic2", "cdc-vdd-dmic3";
+};

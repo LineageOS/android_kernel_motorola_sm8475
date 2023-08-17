@@ -1,0 +1,6 @@
+/*
+  This file is original from waipio-audio-moto-hiphi-common-base.dtsi
+*/
+
+#include "waipio-audio-overlay.dtsi"
+

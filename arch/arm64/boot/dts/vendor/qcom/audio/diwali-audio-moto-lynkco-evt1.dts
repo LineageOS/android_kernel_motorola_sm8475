@@ -1,0 +1,29 @@
+/dts-v1/;
+/plugin/;
+
+#include "diwali-audio-moto-lynkco-common.dtsi"
+
+ / {
+	model = "lynkco";
+	compatible =  "qcom,diwali-qrd", "qcom,diwali", "qcom,qrd", "moto,lynkco";
+	qcom,msm-id = <506 0x10000>, <547 0x10000>, <564 0x10000>;
+	qcom,board-id = <0x41 0xA100>;
+};
+
+&spkr_2_sd_n_sleep {
+	mux {
+		pins = "gpio134";
+	};
+	config {
+		pins = "gpio134";
+	};
+};
+
+&spkr_2_sd_n_active {
+	mux {
+		pins = "gpio134";
+	};
+	config {
+		pins = "gpio134";
+	};
+};

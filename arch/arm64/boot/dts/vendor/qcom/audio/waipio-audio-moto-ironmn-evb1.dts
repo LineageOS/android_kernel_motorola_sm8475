@@ -1,0 +1,11 @@
+/dts-v1/;
+/plugin/;
+
+#include "waipio-audio-moto-ironmn-common.dtsi"
+
+/ {
+	model = "ironmn";
+	compatible = "qcom,waipio", "moto,ironmn";
+	qcom,msm-id = <457 0x10000>, <482 0x10000>;
+	qcom,board-id = <0x41 0x9100>;
+};

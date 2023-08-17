@@ -1,0 +1,108 @@
+#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
+
+&fsa4480 {
+	status = "disabled";
+};
+
+&wcd938x_codec {
+	status = "disabled";
+};
+
+&wcd938x_tx_slave {
+	status = "disabled";
+};
+
+&wcd938x_rx_slave {
+	status = "disabled";
+};
+
+&wcd937x_codec {
+	status = "disabled";
+};
+
+&wcd937x_tx_slave {
+	status = "disabled";
+};
+
+&wcd937x_rx_slave {
+	status = "disabled";
+};
+
+&wsa2_spkr_en1 {
+	status = "disabled";
+};
+
+&wcd_rst_gpio {
+	status = "disabled";
+};
+
+&apps_rsc {
+	rpmh-regulator-ldoc2 {
+		compatible = "qcom,rpmh-vrm-regulator";
+		qcom,resource-name = "ldoc2";
+		qcom,regulator-type = "pmic5-ldo";
+		qcom,supported-modes =
+			<RPMH_REGULATOR_MODE_LPM
+			 RPMH_REGULATOR_MODE_HPM>;
+		qcom,mode-threshold-currents = <0 10000>;
+		L2C: pm8350c_l2: regulator-pm8350c-l2 {
+			regulator-name = "pm8350c_l2";
+			qcom,set = <RPMH_REGULATOR_SET_ALL>;
+			regulator-min-microvolt = <1620000>;
+			regulator-max-microvolt = <1980000>;
+			qcom,init-voltage = <1800000>;
+			qcom,init-mode = <RPMH_REGULATOR_MODE_HPM>;
+		};
+	};
+};
+
+&waipio_snd {
+	qcom,model = "diwali-qrd-snd-card";
+	qcom,sku-model = "diwali-qrd-sku1-snd-card";
+	nvmem-cells = <&adsp_variant>;
+	nvmem-cell-names = "adsp_variant";
+	qcom,msm-mbhc-usbc-audio-supported = <0>;
+	qcom,msm-mi2s-master = <0>, <0>, <0>, <0>, <0>, <0>;
+	qcom,wcd-disabled = <1>;
+	qcom,mi2s-audio-intf = <0>;
+
+	cdc-vdd-dmic1-supply = <&L2C>;
+	qcom,cdc-vdd-dmic1-voltage = <1800000 1800000>;
+	qcom,cdc-vdd-dmic1-current = <30000>;
+
+	qcom,cdc-static-supplies = "cdc-vdd-dmic1";
+	qcom,audio-routing =
+		"TX DMIC0", "Digital Mic0",
+		"TX DMIC1", "Digital Mic1",
+		"TX DMIC2", "Digital Mic2",
+		"TX DMIC3", "Digital Mic3",
+		"TX DMIC4", "Digital Mic4",
+		"TX DMIC5", "Digital Mic5",
+		"TX DMIC6", "Digital Mic6",
+		"TX DMIC7", "Digital Mic7",
+		"WSA SRC0_INP", "SRC0",
+		"WSA_TX DEC0_INP", "TX DEC0 MUX",
+		"WSA_TX DEC1_INP", "TX DEC1 MUX",
+		"RX_TX DEC0_INP", "TX DEC0 MUX",
+		"RX_TX DEC1_INP", "TX DEC1 MUX",
+		"RX_TX DEC2_INP", "TX DEC2 MUX",
+		"RX_TX DEC3_INP", "TX DEC3 MUX",
+		"VA SWR_INPUT", "VA_SWR_CLK",
+		"VA_AIF1 CAP", "VA_SWR_CLK",
+		"VA_AIF2 CAP", "VA_SWR_CLK",
+		"VA_AIF3 CAP", "VA_SWR_CLK",
+		"VA DMIC0", "Digital Mic0",
+		"VA DMIC1", "Digital Mic1",
+		"VA DMIC2", "Digital Mic2",
+		"VA DMIC3", "Digital Mic3",
+		"VA DMIC4", "Digital Mic4",
+		"VA DMIC5", "Digital Mic5",
+		"VA DMIC6", "Digital Mic6",
+		"VA DMIC7", "Digital Mic7";
+
+	asoc-codec	= <&stub_codec>, <&lpass_cdc>,
+			  <&wsa883x_0221>, <&wsa883x_0222>;
+	asoc-codec-names = "msm-stub-codec.1", "lpass-cdc",
+			   "wsa-codec1", "wsa-codec2";
+};
+

@@ -9,8 +9,8 @@
 #include "waipio-audio.dtsi"
 
 / {
-	model = "Qualcomm Technologies, Inc. Cape SoC";
-	compatible = "qcom,cape";
-	qcom,msm-id = <530 0x10000>, <531 0x10000>, <540 0x10000>, <591 0x10000>;
+	model = "Qualcomm Technologies, Inc. Ukee SoC";
+	compatible = "qcom,ukee";
+	qcom,msm-id = <591 0x10000>;
 	qcom,board-id = <0 0>;
 };

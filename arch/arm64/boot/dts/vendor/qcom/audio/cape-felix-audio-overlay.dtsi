@@ -1,0 +1,206 @@
+
+&tlmm {
+
+	cirrus_spk_irq_default: cirrus_spk_irq_default {
+		mux {
+			pins = "gpio43";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio43";
+			drive-strength = <2>; /* 2 MA */
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	cirrus_spk_reset_default: cirrus_spk_reset_default {
+		mux {
+			pins = "gpio49";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio49";
+			drive-strength = <2>; /* 2 MA */
+			bias-pull-up;
+			output-high;
+		};
+	};
+
+};
+
+&qupv3_se19_spi {
+	status = "ok";
+	pinctrl-0 = <&qupv3_se19_spi_active>;
+	pinctrl-1 = <&qupv3_se19_spi_sleep>;
+	cirrus_cs35l45: cs35l45@0 {
+		compatible = "cirrus,cs35l45";
+		spi-max-frequency = <25000000>;
+		reg = <0>;
+		reset-gpios = <&tlmm 49 0>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <43 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+		interrupt-names = "cirrus_spk_irq";
+		sound-name-prefix = "SPK";
+		status = "okay";
+
+		VA-supply = <&S10B>;
+		VP-supply = <&S10B>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&cirrus_spk_irq_default>,
+		            <&cirrus_spk_reset_default>;
+
+		cirrus,dsp-part-name = "SPK-cs35l45";
+		cirrus,asp-sdout-hiz = <3>;
+
+		cirrus,gpio-ctrl1 {
+			gpio-ctrl = <0x0>;
+			gpio-dir = <0x1>;
+		};
+
+		cirrus,gpio-ctrl2 {
+			gpio-ctrl = <0x02>;
+		};
+	};
+};
+
+&wcd938x_rst_gpio {
+	status = "disabled";
+};
+
+&wsa_spkr_en1 {
+	status = "disabled";
+};
+
+&wsa_spkr_en2 {
+	status = "disabled";
+};
+
+&swr_haptics {
+	status = "disabled";
+};
+
+&wsa883x_0221 {
+	status = "disabled";
+};
+
+&wsa883x_0222 {
+	status = "disabled";
+};
+
+&swr_dmic_01 {
+        status = "disabled";
+};
+
+&swr_dmic_02 {
+        status = "disabled";
+};
+
+&swr_dmic_03 {
+        status = "disabled";
+};
+
+&swr_dmic_04 {
+        status = "disabled";
+};
+
+&wcd938x_codec {
+        status = "disabled";
+};
+
+/* Awinic AW88266a */
+&qupv3_se5_i2c {
+	aw882xx_smartpa: aw882xx_smartpa@34 {
+	    compatible = "awinic,aw882xx_smartpa";
+	    reg = <0x34>;
+	    reset-gpio = <&tlmm 48 0>;
+	    irq-gpio = <&tlmm 44 0x2008>;
+	    aw-re-min = <4000>; /*Minimum calibration value (mohms)*/
+	    aw-re-max= <30000>; /*Maximum calibration value (mohms)*/
+	    aw-cali-mode = "none";
+	    status = "okay";
+	};
+};
+
+&spf_core_platform {
+	cdc_pri_mi2s_gpios: cdc_pri_mi2s_gpios {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&pri_mi2s_sck_active &pri_mi2s_ws_active
+				&pri_mi2s_sd0_active &pri_mi2s_sd1_active>;
+		pinctrl-1 = <&pri_mi2s_sck_sleep &pri_mi2s_ws_sleep
+				&pri_mi2s_sd0_sleep &pri_mi2s_sd1_sleep>;
+		#gpio-cells = <0>;
+	};
+	felix_tert_mi2s_gpios: felix_tert_mi2s_gpios {
+		status= "ok";
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&tert_mi2s_sck_active &tert_mi2s_ws_active
+				&tert_mi2s_sd0_active &tert_mi2s_sd1_active>;
+		pinctrl-1 = <&tert_mi2s_sck_sleep &tert_mi2s_ws_sleep
+				&tert_mi2s_sd0_sleep &tert_mi2s_sd1_sleep>;
+		#gpio-cells = <0>;
+	};
+};
+
+&fsa4480 {
+	status = "disabled";
+};
+
+&waipio_snd {
+	qcom,model = "waipio-mtp-snd-card";
+	qcom,msm-mi2s-master = <1>, <1>, <1>, <1>, <1>, <1>;
+	qcom,wcd-disabled = <1>;
+	cirrus,prince-max-devs = <0>;
+	qcom,wsa-max-devs = <0x0>;
+	qcom,wcn-bt = <0x1>;
+	qcom,swr-dmic-max-devs = <0>;
+	qcom,mi2s-audio-intf = <1>;
+	qcom,pri-mi2s-gpios = <&cdc_pri_mi2s_gpios>;
+	qcom,tert-mi2s-gpios = <&felix_tert_mi2s_gpios>;
+
+	cdc-vdd-dmic1-supply = <&L2C>;
+	qcom,cdc-vdd-dmic1-voltage = <1800000 1800000>;
+	qcom,cdc-vdd-dmic1-current = <30000>;
+
+	cdc-vdd-dmic2-supply = <&L2C>;
+	qcom,cdc-vdd-dmic2-voltage = <1800000 1800000>;
+	qcom,cdc-vdd-dmic2-current = <30000>;
+
+	qcom,cdc-static-supplies = "cdc-vdd-dmic1", "cdc-vdd-dmic2";
+	qcom,audio-routing =
+		"TX DMIC0", "Digital Mic0",
+		"TX DMIC1", "Digital Mic1",
+		"TX DMIC2", "Digital Mic2",
+		"TX DMIC3", "Digital Mic3",
+		"TX DMIC4", "Digital Mic4",
+		"TX DMIC5", "Digital Mic5",
+		"TX DMIC6", "Digital Mic6",
+		"TX DMIC7", "Digital Mic7",
+		"RX_TX DEC0_INP", "TX DEC0 MUX",
+		"RX_TX DEC1_INP", "TX DEC1 MUX",
+		"RX_TX DEC2_INP", "TX DEC2 MUX",
+		"RX_TX DEC3_INP", "TX DEC3 MUX",
+		"VA SWR_INPUT", "VA_SWR_CLK",
+		"VA_AIF1 CAP", "VA_SWR_CLK",
+		"VA_AIF2 CAP", "VA_SWR_CLK",
+		"VA_AIF3 CAP", "VA_SWR_CLK",
+		"VA DMIC0", "Digital Mic0",
+		"VA DMIC1", "Digital Mic1",
+		"VA DMIC2", "Digital Mic2",
+		"VA DMIC3", "Digital Mic3",
+		"VA DMIC4", "Digital Mic4",
+		"VA DMIC5", "Digital Mic5",
+		"VA DMIC6", "Digital Mic6",
+		"VA DMIC7", "Digital Mic7";
+	asoc-codec  = <&stub_codec>, <&lpass_cdc>,
+	              <&aw882xx_smartpa>,
+	              <&cirrus_cs35l45>;
+	asoc-codec-names = "msm-stub-codec.1", "lpass-cdc",
+			"aw882xx_smartpa.0-0034",
+			"cirrus-spk" ;
+};

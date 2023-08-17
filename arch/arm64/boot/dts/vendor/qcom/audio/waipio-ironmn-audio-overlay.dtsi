@@ -1,0 +1,401 @@
+
+&tlmm {
+	cirrus_cdc_reset_default: cirrus_cdc_reset_default {
+		mux {
+			pins = "gpio48";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio48";
+			drive-strength = <2>; /* 2 MA */
+			bias-pull-up;
+			output-low;
+		};
+	};
+
+	cirrus_cdc_irq_default: cirrus_cdc_irq_default {
+		mux {
+			pins = "gpio44";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio44";
+			drive-strength = <2>; /* 2 MA */
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	cirrus_cdc_tipsense_default: cirrus_cdc_tipsense_default {
+		mux {
+			pins = "gpio1";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio1";
+			drive-strength = <2>; /* 2 MA */
+			bias-pull-up;
+			output-high;
+		};
+	};
+
+	cirrus_spk_irq_default: cirrus_spk_irq_default {
+		mux {
+			pins = "gpio43";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio43";
+			drive-strength = <2>; /* 2 MA */
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	cirrus_spk_reset_default: cirrus_spk_reset_default {
+		mux {
+			pins = "gpio49";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio49";
+			drive-strength = <2>; /* 2 MA */
+			bias-pull-up;
+			output-high;
+		};
+	};
+
+	qupv3_se19_spi_cs1_pins: qupv3_se19_spi_cs1_pins {
+		qupv3_se19_spi_cs1_active: qupv3_se19_spi_cs1_active {
+			mux {
+				pins = "gpio63";
+				function = "qup_l4";
+			};
+			config {
+				pins = "gpio63";
+				drive-strength = <6>;
+				bias-disable;
+			};
+		};
+
+		qupv3_se19_spi_cs1_sleep: qupv3_se19_spi_cs1_sleep {
+			mux {
+				pins = "gpio63";
+				function = "gpio";
+			};
+			config {
+				pins = "gpio63";
+				drive-strength = <6>;
+				bias-disable;
+			};
+		};
+	};
+
+	qupv3_se19_spi_cs3_pins: qupv3_se19_spi_cs3_pins {
+		qupv3_se19_spi_cs3_active: qupv3_se19_spi_cs3_active {
+			mux {
+				pins = "gpio67";
+				function = "qup_l6";
+			};
+			config {
+				pins = "gpio67";
+				drive-strength = <6>;
+				bias-disable;
+			};
+		};
+
+		qupv3_se19_spi_cs3_sleep: qupv3_se19_spi_cs3_sleep {
+			mux {
+				pins = "gpio67";
+				function = "gpio";
+			};
+			config {
+				pins = "gpio67";
+				drive-strength = <6>;
+				bias-disable;
+			};
+		};
+	};
+
+};
+
+&soc {
+	dummy_vreg: dummy_vreg {
+		compatible = "regulator-fixed";
+		status = "ok";
+		regulator-name = "dummy_vreg";
+	};
+};
+
+&qupv3_se19_spi {
+	status = "ok";
+	pinctrl-0 = <&qupv3_se19_spi_active>, <&qupv3_se19_spi_cs1_active>,
+		            <&qupv3_se19_spi_cs3_active>;
+	pinctrl-1 = <&qupv3_se19_spi_sleep>, <&qupv3_se19_spi_cs1_sleep>,
+		            <&qupv3_se19_spi_cs3_sleep>;
+	cirrus_cs35l45_0: cs35l45@0 {
+		compatible = "cirrus,cs35l45";
+		spi-max-frequency = <25000000>;
+		reg = <0>;
+		reset-gpios = <&tlmm 49 0>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <43 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+		interrupt-names = "cirrus_spk_irq";
+		sound-name-prefix = "SPK1";
+		status = "okay";
+
+		VA-supply = <&S10B>;
+		VP-supply = <&S10B>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&cirrus_spk_irq_default>,
+		            <&cirrus_spk_reset_default>;
+
+		cirrus,dsp-part-name = "SPK1-cs35l45";
+		cirrus,asp-sdout-hiz = <3>;
+
+		cirrus,gpio-ctrl1 {
+			gpio-ctrl = <0x0>;
+			gpio-dir = <0x1>;
+		};
+
+		cirrus,gpio-ctrl2 {
+			gpio-ctrl = <0x02>;
+		};
+	};
+
+	cirrus_cs35l45_1: cs35l45@1 {
+		compatible = "cirrus,cs35l45";
+		spi-max-frequency = <25000000>;
+		reg = <1>;
+		reset-gpios = <&tlmm 49 0>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <43 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+		interrupt-names = "cirrus_spk_irq";
+		sound-name-prefix = "SPK2";
+		status = "okay";
+
+		VA-supply = <&S10B>;
+		VP-supply = <&S10B>;
+		cirrus,dsp-part-name = "SPK2-cs35l45";
+		cirrus,asp-sdout-hiz = <3>;
+
+		cirrus,gpio-ctrl1 {
+			gpio-ctrl = <0x0>;
+			gpio-dir = <0x1>;
+		};
+
+		cirrus,gpio-ctrl2 {
+			gpio-ctrl = <0x02>;
+		};
+	};
+
+	cirrus_cs35l45_3: cs35l45@3 {
+		compatible = "cirrus,cs35l45";
+		spi-max-frequency = <25000000>;
+		reg = <3>;
+		reset-gpios = <&tlmm 49 0>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <43 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+		interrupt-names = "cirrus_spk_irq";
+		sound-name-prefix = "SPK3";
+		status = "okay";
+
+		VA-supply = <&S10B>;
+		VP-supply = <&S10B>;
+		cirrus,dsp-part-name = "SPK3-cs35l45";
+		cirrus,asp-sdout-hiz = <3>;
+
+		cirrus,gpio-ctrl1 {
+			gpio-ctrl = <0x0>;
+			gpio-dir = <0x1>;
+		};
+
+		cirrus,gpio-ctrl2 {
+			gpio-ctrl = <0x02>;
+		};
+	};
+
+};
+
+&qupv3_se5_i2c {
+	status = "ok";
+	qcom,clk-freq-out = <100000>;
+	cs42l42: cs42l42@48 {
+               #sound-dai-cells = <1>;
+               compatible = "cirrus,cs42l42";
+               reg = <0x48>;
+               pinctrl-names = "default";
+               pinctrl-0 = <&cirrus_cdc_reset_default>, <&cirrus_cdc_irq_default>,
+                               <&cirrus_cdc_tipsense_default>;
+               VA-supply = <&L12C>;
+               VP-supply = <&dummy_vreg>;
+               VCP-supply = <&L12C>;
+               VD_FILT-supply = <&dummy_vreg>;
+               VL-supply = <&S10B>;
+               reset-gpios = <&tlmm 48 0>;
+               tip-sense-gpios = <&tlmm 1 0>;
+               interrupt-parent = <&tlmm>;
+               interrupts = <44 0x8>;
+
+               cirrus,ts-inv = <0x00>;
+               cirrus,ts-dbnc-rise = <0x05>;
+               cirrus,ts-dbnc-fall = <0x00>;
+               cirrus,btn-det-init-dbnce = <100>;
+               cirrus,btn-det-event-dbnce = <10>;
+               cirrus,bias-lvls = <0x0F 0x08 0x04 0x01>;
+               cirrus,hs-bias-ramp-rate = <0x02>;
+        };
+};
+
+&qupv3_se8_i2c {
+	status = "disabled";
+};
+
+&wcd938x_rst_gpio {
+	status = "disabled";
+};
+
+&wsa_spkr_en1 {
+	status = "disabled";
+};
+
+&wsa_spkr_en2 {
+	status = "disabled";
+};
+
+&swr_haptics {
+	status = "disabled";
+};
+
+&wsa883x_0221 {
+	status = "disabled";
+};
+
+&wsa883x_0222 {
+	status = "disabled";
+};
+
+&swr_dmic_01 {
+        status = "disabled";
+};
+
+&swr_dmic_02 {
+        status = "disabled";
+};
+
+&swr_dmic_03 {
+        status = "disabled";
+};
+
+&swr_dmic_04 {
+        status = "disabled";
+};
+
+&wcd938x_codec {
+        status = "disabled";
+};
+
+&dai_mi2s0 {
+	qcom,msm-mi2s-rx-lines = <1>;
+	qcom,msm-mi2s-tx-lines = <2>;
+};
+
+&dai_mi2s2 {
+	qcom,msm-mi2s-rx-lines = <1>;
+	qcom,msm-mi2s-tx-lines = <2>;
+};
+
+&spf_core_platform {
+	cdc_pri_mi2s_gpios: cdc_pri_mi2s_gpios {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&pri_mi2s_sck_active &pri_mi2s_ws_active
+				&pri_mi2s_sd0_active &pri_mi2s_sd1_active>;
+		pinctrl-1 = <&pri_mi2s_sck_sleep &pri_mi2s_ws_sleep
+				&pri_mi2s_sd0_sleep &pri_mi2s_sd1_sleep>;
+		#gpio-cells = <0>;
+	};
+/*
+	cdc_tert_mi2s_gpios: cdc_tert_mi2s_gpios {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&tert_mi2s_sck_active &tert_mi2s_ws_active
+				&tert_mi2s_sd0_active &tert_mi2s_sd1_active>;
+		pinctrl-1 = <&tert_mi2s_sck_sleep &tert_mi2s_ws_sleep
+				&tert_mi2s_sd0_sleep &tert_mi2s_sd1_sleep>;
+		#gpio-cells = <0>;
+	};
+*/
+};
+
+&qupv3_se15_i2c {
+        fsa4480_switch: fsa4480@43 {
+                compatible = "qcom,fsa4480-i2c";
+                reg = <0x43>;
+        };
+};
+
+&fsa4480 {
+	status = "disabled";
+};
+
+&sde_dp {
+	qcom,dp-aux-switch = <&fsa4480_switch>;
+};
+
+&waipio_snd {
+	qcom,model = "waipio-mtp-snd-card";
+	qcom,msm-mi2s-master = <1>, <1>, <1>, <1>, <1>, <1>;
+	qcom,wcd-disabled = <1>;
+	cirrus,prince-max-devs = <0>;
+	qcom,wsa-max-devs = <0x0>;
+	qcom,wcn-bt = <0x1>;
+	qcom,swr-dmic-max-devs = <0>;
+	qcom,mi2s-audio-intf = <1>;
+	qcom,pri-mi2s-gpios = <&cdc_pri_mi2s_gpios>;
+	qcom,tert-mi2s-gpios = <&cdc_tert_mi2s_gpios>;
+
+	cdc-vdd-dmic1-supply = <&L6C>;
+	qcom,cdc-vdd-dmic1-voltage = <1800000 1800000>;
+	qcom,cdc-vdd-dmic1-current = <30000>;
+
+	qcom,cdc-static-supplies = "cdc-vdd-dmic1";
+	qcom,audio-routing =
+		"TX DMIC0", "Digital Mic0",
+		"TX DMIC1", "Digital Mic1",
+		"TX DMIC2", "Digital Mic2",
+		"TX DMIC3", "Digital Mic3",
+		"TX DMIC4", "Digital Mic4",
+		"TX DMIC5", "Digital Mic5",
+		"TX DMIC6", "Digital Mic6",
+		"TX DMIC7", "Digital Mic7",
+		"RX_TX DEC0_INP", "TX DEC0 MUX",
+		"RX_TX DEC1_INP", "TX DEC1 MUX",
+		"RX_TX DEC2_INP", "TX DEC2 MUX",
+		"RX_TX DEC3_INP", "TX DEC3 MUX",
+		"VA SWR_INPUT", "VA_SWR_CLK",
+		"VA_AIF1 CAP", "VA_SWR_CLK",
+		"VA_AIF2 CAP", "VA_SWR_CLK",
+		"VA_AIF3 CAP", "VA_SWR_CLK",
+		"VA DMIC0", "Digital Mic0",
+		"VA DMIC1", "Digital Mic1",
+		"VA DMIC2", "Digital Mic2",
+		"VA DMIC3", "Digital Mic3",
+		"VA DMIC4", "Digital Mic4",
+		"VA DMIC5", "Digital Mic5",
+		"VA DMIC6", "Digital Mic6",
+		"VA DMIC7", "Digital Mic7";
+	asoc-codec  = <&stub_codec>, <&lpass_cdc>,
+	              <&cirrus_cs35l45_0>, <&cirrus_cs35l45_1>,
+			<&cirrus_cs35l45_3>, <&cs42l42>;
+	asoc-codec-names = "msm-stub-codec.1", "lpass-cdc",
+			"cirrus-spk-1", "cirrus-spk-2", "cirrus-spk-3", "cs42l42" ;
+	fsa4480-i2c-handle = <&fsa4480_switch>;
+};
