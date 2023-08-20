@@ -171,6 +171,7 @@ obj-$(CONFIG_REGULATOR_STUB) += stub-regulator.o
 obj-$(CONFIG_REGULATOR_DEBUG_CONTROL) += debug-regulator.o
 obj-$(CONFIG_REGULATOR_QTI_OCP_NOTIFIER) += qti-ocp-notifier.o
 
+obj-y += wl2864c/
 obj-y += wl2868c/
 obj-y += slg5bm43670/
 
