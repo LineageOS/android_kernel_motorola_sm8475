@@ -120,3 +120,4 @@ obj-$(CONFIG_TOUCHSCREEN_NT36XXX_I2C)	+= nt36xxx/
 obj-$(CONFIG_TOUCHSCREEN_GOODIX_BRL)	+= goodix_berlin_driver/
 obj-y					+= touchscreen_mmi/
 obj-y					+= goodix_berlin_mmi/
+obj-y					+= focaltech_touch_v3/
