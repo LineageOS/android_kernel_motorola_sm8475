@@ -6,3 +6,4 @@ obj-y				+= qti_glink_charger/
 obj-y				+= mmi_charger/
 obj-y				+= bm_adsp_ulog/
 obj-y				+= cw2217b_fg_mmi/
+obj-y				+= sgm4154x_charger_lite/
