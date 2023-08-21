@@ -88,4 +88,5 @@ obj-$(CONFIG_INPUT_YEALINK)		+= yealink.o
 obj-$(CONFIG_INPUT_MMI_KEY_SWAP)	+= key_swap.o
 obj-$(CONFIG_INPUT_IDEAPAD_SLIDEBAR)	+= ideapad_slidebar.o
 obj-y					+= rbs_fod_mmi/
+obj-y					+= fpc_fps_mmi/
 
