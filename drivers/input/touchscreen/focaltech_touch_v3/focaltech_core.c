@@ -63,6 +63,7 @@ extern void fts_mmi_dev_unregister(struct fts_ts_data *ts_data);
 *****************************************************************************/
 #define FTS_DRIVER_NAME                     "fts_ts"
 #define FTS_DRIVER_PEN_NAME                 "fts_ts,pen"
+#define FTS_DRIVER_PHYS                     "fts_ts/input0"
 #define INTERVAL_READ_REG                   200  /* unit:ms */
 #define TIMEOUT_READ_REG                    1000 /* unit:ms */
 #if FTS_POWER_SOURCE_CUST_EN
@@ -1185,6 +1186,7 @@ static int fts_input_init(struct fts_ts_data *ts_data)
 
     /* Init and register Input device */
     input_dev->name = FTS_DRIVER_NAME;
+    input_dev->phys = FTS_DRIVER_PHYS;
     if (ts_data->bus_type == BUS_TYPE_I2C)
         input_dev->id.bustype = BUS_I2C;
     else
