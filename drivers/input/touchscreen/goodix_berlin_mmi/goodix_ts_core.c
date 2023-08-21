@@ -2114,7 +2114,7 @@ static int goodix_ts_pm_resume(struct device *dev)
 
 	return goodix_ts_resume(core_data);
 }
-#elif defined (CONFIG_TOUCHSCREEN_GOODIX_BRL_SPI)
+#elif defined (CONFIG_TOUCHSCREEN_GOODIX_BRL_MMI_SPI)
 static int goodix_ts_pm_suspend(struct device *dev)
 {
 	struct goodix_ts_core *core_data =
@@ -2584,7 +2584,7 @@ static const struct dev_pm_ops dev_pm_ops = {
 		&& !defined(CONFIG_INPUT_TOUCHSCREEN_MMI)
 	.suspend = goodix_ts_pm_suspend,
 	.resume = goodix_ts_pm_resume,
-#elif defined (CONFIG_TOUCHSCREEN_GOODIX_BRL_SPI)
+#elif defined (CONFIG_TOUCHSCREEN_GOODIX_BRL_MMI_SPI)
 	.suspend = goodix_ts_pm_suspend,
 	.resume = goodix_ts_pm_resume,
 #endif
@@ -2615,7 +2615,7 @@ static int __init goodix_ts_core_init(void)
 	int ret;
 
 	ts_info("Core layer init:%s", GOODIX_DRIVER_VERSION);
-#ifdef CONFIG_TOUCHSCREEN_GOODIX_BRL_SPI
+#ifdef CONFIG_TOUCHSCREEN_GOODIX_BRL_MMI_SPI
 	ret = goodix_spi_bus_init();
 #else
 	ret = goodix_i2c_bus_init();
@@ -2631,7 +2631,7 @@ static void __exit goodix_ts_core_exit(void)
 {
 	ts_info("Core layer exit");
 	platform_driver_unregister(&goodix_ts_driver);
-#ifdef CONFIG_TOUCHSCREEN_GOODIX_BRL_SPI
+#ifdef CONFIG_TOUCHSCREEN_GOODIX_BRL_MMI_SPI
 	goodix_spi_bus_exit();
 #else
 	goodix_i2c_bus_exit();
