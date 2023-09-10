@@ -3770,7 +3770,7 @@ static int dsi_panel_set_hbm_status(struct dsi_panel *panel,
 	priv_info = panel->cur_mode->priv_info;
 	bl_level = panel->bl_config.real_bl_level;
 
-	if (bl_level >= panel->lhbm_config.alpha_size) {
+	if (panel->lhbm_config.enable && bl_level >= panel->lhbm_config.alpha_size) {
 		DSI_ERR("bl_level: %u outside of alpha_size: %u\n",
 			bl_level, panel->lhbm_config.alpha_size);
 		return -EINVAL;
@@ -3779,7 +3779,7 @@ static int dsi_panel_set_hbm_status(struct dsi_panel *panel,
 	if (hbm_status) {
 		type = DSI_CMD_SET_HBM_ON;
 		alpha_val = bl_level;
-	} else if (fod_hbm_status) {
+	} else if (panel->lhbm_config.enable && fod_hbm_status) {
 		type = DSI_CMD_SET_HBM_FOD_ON;
 		alpha_val = panel->lhbm_config.alpha[bl_level];
 	} else {
@@ -3793,7 +3793,7 @@ static int dsi_panel_set_hbm_status(struct dsi_panel *panel,
 		return -EINVAL;
 	}
 
-	if (type == DSI_CMD_SET_HBM_FOD_ON || type == DSI_CMD_SET_HBM_OFF) {
+	if (panel->lhbm_config.enable && (type == DSI_CMD_SET_HBM_FOD_ON || type == DSI_CMD_SET_HBM_OFF)) {
 		rc = dsi_panel_update_hbm_cmd(cmd_set, MIPI_DCS_SET_DISPLAY_BRIGHTNESS,
 					      bl_level);
 		if (rc) {
@@ -3910,6 +3910,9 @@ static ssize_t sysfs_fod_hbm_write(struct device *dev,
 	struct dsi_panel *panel = display->panel;
 	bool status;
 	int rc;
+
+	if (!panel->lhbm_config.enable)
+		return -EOPNOTSUPP;
 
 	rc = kstrtobool(buf, &status);
 	if (rc)
