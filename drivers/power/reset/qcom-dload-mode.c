@@ -16,6 +16,9 @@
 #include <linux/qcom_scm.h>
 #include <soc/qcom/minidump.h>
 
+static char *sys_restart_mode = "NULL";
+module_param(sys_restart_mode, charp, 0644);
+
 enum qcom_download_dest {
 	QCOM_DOWNLOAD_DEST_UNKNOWN = -1,
 	QCOM_DOWNLOAD_DEST_QPST = 0,
@@ -35,10 +38,14 @@ struct qcom_dload {
 
 #define QCOM_DOWNLOAD_BOTHDUMP (QCOM_DOWNLOAD_FULLDUMP | QCOM_DOWNLOAD_MINIDUMP)
 
+#define DUMP_MODE_NAME_LEN 8
+
+static char dump_mode_name[DUMP_MODE_NAME_LEN];
+
 static bool enable_dump =
 	IS_ENABLED(CONFIG_POWER_RESET_QCOM_DOWNLOAD_MODE_DEFAULT);
 static enum qcom_download_mode current_download_mode = QCOM_DOWNLOAD_NODUMP;
-static enum qcom_download_mode dump_mode = QCOM_DOWNLOAD_FULLDUMP;
+static enum qcom_download_mode dump_mode = QCOM_DOWNLOAD_BOTHDUMP;
 
 static int set_download_mode(enum qcom_download_mode mode)
 {
@@ -104,6 +111,8 @@ static int param_set_download_mode(const char *val,
 }
 module_param_call(download_mode, param_set_download_mode, param_get_int,
 			&enable_dump, 0644);
+
+module_param_string(name, dump_mode_name, DUMP_MODE_NAME_LEN, 0644);
 
 /* interface for exporting attributes */
 struct reset_attribute {
@@ -257,6 +266,18 @@ static int qcom_dload_reboot(struct notifier_block *this, unsigned long event,
 	struct qcom_dload *poweroff = container_of(this, struct qcom_dload,
 						     reboot_nb);
 
+	pr_info("%s: sys_restart_mode [%s]\n", __func__, sys_restart_mode);
+	if (!strcmp(sys_restart_mode, "panic")) {
+		/* Trigger a real panic on debug setting */
+		BUG();
+	}
+	if (!strcmp(sys_restart_mode, "recovery_panic")) {
+		if (!strcmp(cmd, "recovery")) {
+			/* Trigger a real panic on debug setting */
+			BUG();
+		}
+	}
+
 	/* Clean shutdown, disable dump mode to allow normal restart */
 	if (!poweroff->in_panic)
 		set_download_mode(QCOM_DOWNLOAD_NODUMP);
@@ -315,6 +336,15 @@ static int qcom_dload_probe(struct platform_device *pdev)
 	}
 
 	poweroff->dload_dest_addr = map_prop_mem("qcom,msm-imem-dload-type");
+
+	if (!strncmp("full", dump_mode_name, DUMP_MODE_NAME_LEN))
+		dump_mode = QCOM_DOWNLOAD_FULLDUMP;
+	else if (!strncmp("mini", dump_mode_name, DUMP_MODE_NAME_LEN))
+		dump_mode = QCOM_DOWNLOAD_MINIDUMP;
+	else if (!strncmp("both", dump_mode_name, DUMP_MODE_NAME_LEN))
+		dump_mode = QCOM_DOWNLOAD_BOTHDUMP;
+	else
+		dump_mode = QCOM_DOWNLOAD_NODUMP;
 
 	msm_enable_dump_mode(enable_dump);
 	if (!enable_dump)

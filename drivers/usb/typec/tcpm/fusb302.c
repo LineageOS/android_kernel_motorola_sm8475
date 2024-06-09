@@ -30,15 +30,28 @@
 #include <linux/usb/tcpm.h>
 #include <linux/usb/pd.h>
 #include <linux/workqueue.h>
+#include <linux/of.h>
+#include <linux/of_gpio.h>
+#include <linux/gpio.h>
+#include <linux/hrtimer.h>
+#include <linux/kthread.h>
 
 #include "fusb302_reg.h"
 
+#define MOTO_ALTMODE(fmt, ...) pr_debug("MMI_DETECT: FUSB302[%s]: " fmt "\n", __func__, ##__VA_ARGS__)
+
+extern const char *tcpm_msg2string(const struct pd_message *msg);
+
 /*
  * When the device is SNK, BC_LVL interrupt is used to monitor cc pins
- * for the current capability offered by the SRC. As FUSB302 chip fires
- * the BC_LVL interrupt on PD signalings, cc lvl should be handled after
- * a delay to avoid measuring on PD activities. The delay is slightly
- * longer than PD_T_PD_DEBPUNCE (10-20ms).
+ * for the current capability offered by the SRC, and for PD_REV3
+ * collision avoidance logic. As FUSB302 chip would fire the BC_LVL
+ * interrupt on PD signalings too, it needs to be handled with care.
+ * But unconditional debouncing is not great because we could be
+ * pushing off the handler as irq keeps firing, and missing the
+ * SINK_TX_OK/SINK_TX_NG transitions as result. This delay should
+ * only be applied when the irq status indicates PD activity bit.
+ * The value should be somewhat longer than PD_T_PD_DEBOUNCE.
  */
 #define T_BC_LVL_DEBOUNCE_DELAY_MS 30
 
@@ -76,7 +89,9 @@ struct fusb302_chip {
 	struct tcpm_port *tcpm_port;
 	struct tcpc_dev tcpc_dev;
 
+	struct regulator *vdd;
 	struct regulator *vbus;
+	struct regulator *vconn;
 
 	spinlock_t irq_lock;
 	struct work_struct irq_work;
@@ -84,10 +99,12 @@ struct fusb302_chip {
 	bool irq_while_suspended;
 	struct gpio_desc *gpio_int_n;
 	int gpio_int_n_irq;
+	int gpio_ccdir;
 	struct extcon_dev *extcon;
 
 	struct workqueue_struct *wq;
 	struct delayed_work bc_lvl_handler;
+	struct delayed_work tcpm_connect;
 
 	/* lock for sharing chip states */
 	struct mutex lock;
@@ -109,6 +126,10 @@ struct fusb302_chip {
 	enum typec_cc_status cc2;
 	u32 snk_pdo[PDO_MAX_OBJECTS];
 
+	struct kthread_worker *kw;
+	struct kthread_work event_work;
+	struct hrtimer bc_lvl_timer;
+
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *dentry;
 	/* lock for log buffer access */
@@ -122,6 +143,7 @@ struct fusb302_chip {
 /*
  * Logging
  */
+
 
 #ifdef CONFIG_DEBUG_FS
 static bool fusb302_log_full(struct fusb302_chip *chip)
@@ -575,6 +597,55 @@ static int fusb302_set_toggling(struct fusb302_chip *chip,
 	return ret;
 }
 
+static int fusb302_update_bc_lvl(struct fusb302_chip *chip,
+				bool new_bc_lvl, unsigned duration)
+{
+	u8 mask1, mask2;
+	int ret;
+
+	/* this function called with mutex locked */
+
+        if (new_bc_lvl == false && chip->intr_bc_lvl == false)
+                return 0;
+        if (new_bc_lvl == true && chip->intr_bc_lvl == true)
+                return 0;
+
+	ret = fusb302_i2c_read(chip, FUSB_REG_MASK, &mask1);
+	if (ret < 0)
+		return ret;
+	/*
+	   mask BC_LVL interrupt to avoid firing on PD signaling
+	   we will restore when the debounce timer expires
+	*/
+	if (new_bc_lvl)
+		ret = fusb302_i2c_clear_bits(chip, FUSB_REG_MASK,
+					FUSB_REG_MASK_BC_LVL);
+	else
+		ret = fusb302_i2c_set_bits(chip, FUSB_REG_MASK,
+					FUSB_REG_MASK_BC_LVL);
+	if (ret < 0)
+		goto leave_now;
+	else
+		chip->intr_bc_lvl = new_bc_lvl;
+
+	if (duration)
+		hrtimer_start(&chip->bc_lvl_timer,
+				ms_to_ktime(duration),
+				HRTIMER_MODE_REL);
+
+	/* read back for a good measure */
+	ret = fusb302_i2c_read(chip, FUSB_REG_MASK, &mask2);
+
+leave_now:
+	if (ret < 0)
+		fusb302_log(chip, "failed to mask BC_LVL on Tx");
+	else
+		fusb302_log(chip, "updated BC_LVL mask (%s) -> (%s)",
+				mask1 & FUSB_REG_MASK_BC_LVL ? "masked" : "unmasked",
+				mask2 & FUSB_REG_MASK_BC_LVL ? "masked" : "unmasked");
+	return ret;
+}
+
 static const char * const typec_cc_status_name[] = {
 	[TYPEC_CC_OPEN]		= "Open",
 	[TYPEC_CC_RA]		= "Ra",
@@ -735,17 +806,22 @@ static int tcpm_set_vconn(struct tcpc_dev *dev, bool on)
 		fusb302_log(chip, "vconn is already %s", on ? "On" : "Off");
 		goto done;
 	}
+
 	if (on) {
+		ret = chip->vconn ? regulator_enable(chip->vconn) : 0;
 		switches0_data = (chip->cc_polarity == TYPEC_POLARITY_CC1) ?
 				 FUSB_REG_SWITCHES0_VCONN_CC2 :
 				 FUSB_REG_SWITCHES0_VCONN_CC1;
-	}
+	} else
+		ret = chip->vconn ? regulator_disable(chip->vconn) : 0;
 	ret = fusb302_i2c_mask_write(chip, FUSB_REG_SWITCHES0,
 				     switches0_mask, switches0_data);
 	if (ret < 0)
 		goto done;
 	chip->vconn_on = on;
 	fusb302_log(chip, "vconn := %s", on ? "On" : "Off");
+	if (chip->vconn)
+		fusb302_log(chip, "VCONN is %s", regulator_is_enabled(chip->vconn) ? "On" : "Off");
 done:
 	mutex_unlock(&chip->lock);
 
@@ -763,9 +839,11 @@ static int tcpm_set_vbus(struct tcpc_dev *dev, bool on, bool charge)
 		fusb302_log(chip, "vbus is already %s", on ? "On" : "Off");
 	} else {
 		if (on)
-			ret = regulator_enable(chip->vbus);
+			ret = chip->vbus ? regulator_enable(chip->vbus) : 0;
 		else
-			ret = regulator_disable(chip->vbus);
+			ret = chip->vbus ? regulator_disable(chip->vbus) : 0;
+		if (chip->vbus)
+			fusb302_log(chip, "VBUS is %s", regulator_is_enabled(chip->vbus) ? "On" : "Off");
 		if (ret < 0) {
 			fusb302_log(chip, "cannot %s vbus regulator, ret=%d",
 				    on ? "enable" : "disable", ret);
@@ -973,6 +1051,7 @@ static int fusb302_pd_send_message(struct fusb302_chip *chip,
 			    "PD message too long %d (incl. header)", len);
 		return -EINVAL;
 	}
+
 	/* packsym tells the FUSB302 chip that the next X bytes are payload */
 	buf[pos++] = FUSB302_TKN_PACKSYM | (len & 0x1F);
 	memcpy(&buf[pos], &msg->header, sizeof(msg->header));
@@ -994,8 +1073,7 @@ static int fusb302_pd_send_message(struct fusb302_chip *chip,
 	ret = fusb302_i2c_block_write(chip, FUSB_REG_FIFOS, pos, buf);
 	if (ret < 0)
 		return ret;
-	fusb302_log(chip, "sending PD message header: %x", msg->header);
-	fusb302_log(chip, "sending PD message len: %d", len);
+	fusb302_log(chip, "sending PD message header: %#x, len: %d", msg->header, len);
 
 	return ret;
 }
@@ -1033,6 +1111,9 @@ static int tcpm_pd_transmit(struct tcpc_dev *dev, enum tcpm_transmit_type type,
 						     FUSB_REG_CONTROL3_N_RETRIES_3);
 		if (ret < 0)
 			fusb302_log(chip, "Cannot update retry count ret=%d", ret);
+
+		fusb302_log(chip, "==> %s, type: %s", transmit_type_name[type],
+							tcpm_msg2string(msg));
 
 		ret = fusb302_pd_send_message(chip, msg);
 		if (ret < 0)
@@ -1086,6 +1167,7 @@ static void fusb302_bc_lvl_handler_work(struct work_struct *work)
 	fusb302_log(chip, "BC_LVL handler, status0=0x%02x", status0);
 	if (status0 & FUSB_REG_STATUS0_ACTIVITY) {
 		fusb302_log(chip, "CC activities detected, delay handling");
+		fusb302_update_bc_lvl(chip, false, PD_T_PD_DEBOUNCE);
 		mod_delayed_work(chip->wq, &chip->bc_lvl_handler,
 				 msecs_to_jiffies(T_BC_LVL_DEBOUNCE_DELAY_MS));
 		goto done;
@@ -1097,16 +1179,22 @@ static void fusb302_bc_lvl_handler_work(struct work_struct *work)
 			fusb302_log(chip, "cc1: %s -> %s",
 				    typec_cc_status_name[chip->cc1],
 				    typec_cc_status_name[cc_status]);
-			chip->cc1 = cc_status;
-			tcpm_cc_change(chip->tcpm_port);
+			if ((cc_status == SINK_TX_NG && chip->cc1 == SINK_TX_OK) ||
+			    (cc_status == SINK_TX_OK && chip->cc1 == SINK_TX_NG)) {
+				chip->cc1 = cc_status;
+				tcpm_cc_change(chip->tcpm_port);
+			}
 		}
 	} else {
 		if (chip->cc2 != cc_status) {
 			fusb302_log(chip, "cc2: %s -> %s",
 				    typec_cc_status_name[chip->cc2],
 				    typec_cc_status_name[cc_status]);
-			chip->cc2 = cc_status;
-			tcpm_cc_change(chip->tcpm_port);
+			if ((cc_status == SINK_TX_NG && chip->cc2 == SINK_TX_OK) ||
+			    (cc_status == SINK_TX_OK && chip->cc2 == SINK_TX_NG)) {
+				chip->cc2 = cc_status;
+				tcpm_cc_change(chip->tcpm_port);
+			}
 		}
 	}
 
@@ -1114,8 +1202,18 @@ done:
 	mutex_unlock(&chip->lock);
 }
 
-static void init_tcpc_dev(struct tcpc_dev *fusb302_tcpc_dev)
+static int init_tcpc_dev(struct tcpc_dev *fusb302_tcpc_dev)
 {
+	int ret = 0;
+	struct fusb302_chip *chip = container_of(fusb302_tcpc_dev, struct fusb302_chip,
+						 tcpc_dev);
+	/* Check for fusb302 present */
+	ret = fusb302_sw_reset(chip);
+	if (ret < 0 ) {
+		fusb302_log(chip, "tcpc_init:fusb302 reset Error, ret=%d", ret);
+		return ret;
+	}
+
 	fusb302_tcpc_dev->init = tcpm_init;
 	fusb302_tcpc_dev->get_vbus = tcpm_get_vbus;
 	fusb302_tcpc_dev->get_current_limit = tcpm_get_current_limit;
@@ -1128,6 +1226,8 @@ static void init_tcpc_dev(struct tcpc_dev *fusb302_tcpc_dev)
 	fusb302_tcpc_dev->set_roles = tcpm_set_roles;
 	fusb302_tcpc_dev->start_toggling = tcpm_start_toggling;
 	fusb302_tcpc_dev->pd_transmit = tcpm_pd_transmit;
+
+	return ret;
 }
 
 static const char * const cc_polarity_name[] = {
@@ -1179,7 +1279,7 @@ static int fusb302_set_cc_polarity_and_pull(struct fusb302_chip *chip,
 static int fusb302_handle_togdone_snk(struct fusb302_chip *chip,
 				      u8 togdone_result)
 {
-	int ret = 0;
+	int ret = 0, readval;
 	u8 status0;
 	u8 bc_lvl;
 	enum typec_cc_polarity cc_polarity;
@@ -1189,6 +1289,9 @@ static int fusb302_handle_togdone_snk(struct fusb302_chip *chip,
 	cc_polarity = (togdone_result == FUSB_REG_STATUS1A_TOGSS_SNK1) ?
 		      TYPEC_POLARITY_CC1 : TYPEC_POLARITY_CC2;
 	ret = fusb302_set_cc_polarity_and_pull(chip, cc_polarity, false, true);
+
+	fusb302_log(chip, "togdone_result: %d", togdone_result);
+
 	if (ret < 0) {
 		fusb302_log(chip, "cannot set cc polarity %s, ret=%d",
 			    cc_polarity_name[cc_polarity], ret);
@@ -1234,6 +1337,19 @@ static int fusb302_handle_togdone_snk(struct fusb302_chip *chip,
 	fusb302_log(chip, "detected cc1=%s, cc2=%s",
 		    typec_cc_status_name[cc1],
 		    typec_cc_status_name[cc2]);
+
+	//Set ccdir to ssredrv:
+	gpio_set_value(chip->gpio_ccdir, cc_polarity);
+	readval = gpio_get_value(chip->gpio_ccdir);
+	if (readval != cc_polarity) {
+		fusb302_log(chip,"FAIL CCdir-ctrl gpio[%d], wrote:%d, read:%d",
+				chip->gpio_ccdir,
+				cc_polarity,
+				readval);
+		return -EINVAL;
+	}
+	fusb302_log(chip,"set CCdir-ctrl gpio[%d]=%d",
+			chip->gpio_ccdir, cc_polarity);
 
 	return ret;
 }
@@ -1338,9 +1454,11 @@ static int fusb302_handle_togdone_src(struct fusb302_chip *chip,
 	if (cc1 == TYPEC_CC_RD &&
 			(cc2 == TYPEC_CC_OPEN || cc2 == TYPEC_CC_RA)) {
 		cc_polarity = TYPEC_POLARITY_CC1;
+		MOTO_ALTMODE("HOST mode CC NORMAL");
 	} else if (cc2 == TYPEC_CC_RD &&
 		    (cc1 == TYPEC_CC_OPEN || cc1 == TYPEC_CC_RA)) {
 		cc_polarity = TYPEC_POLARITY_CC2;
+		MOTO_ALTMODE("HOST mode CC REVERSED");
 	} else {
 		fusb302_log(chip, "unexpected CC status cc1=%s, cc2=%s, restarting toggling",
 			    typec_cc_status_name[cc1],
@@ -1376,6 +1494,9 @@ static int fusb302_handle_togdone_src(struct fusb302_chip *chip,
 	fusb302_log(chip, "detected cc1=%s, cc2=%s",
 		    typec_cc_status_name[cc1],
 		    typec_cc_status_name[cc2]);
+
+	//Set ccdir to ss-redrv:
+	gpio_set_value(chip->gpio_ccdir, cc_polarity);
 
 	return ret;
 }
@@ -1418,13 +1539,31 @@ static int fusb302_pd_reset(struct fusb302_chip *chip)
 				    FUSB_REG_RESET_PD_RESET);
 }
 
+static const char *token2addr(u8 token)
+{
+	u8 index = (token >> 5) & 0x7;
+	const unsigned addr[] =
+	{
+		[3] = TCPC_TX_SOP_DEBUG_PRIME_PRIME,
+		[4] = TCPC_TX_SOP_DEBUG_PRIME,
+		[5] = TCPC_TX_SOP_PRIME_PRIME,
+		[6] = TCPC_TX_SOP_PRIME,
+		[7] = TCPC_TX_SOP
+	};
+	if (index > 2 && index < 8)
+		return  transmit_type_name[addr[index]];
+	else
+		return "RESERVED";
+}
+
 static int fusb302_pd_read_message(struct fusb302_chip *chip,
 				   struct pd_message *msg)
 {
 	int ret = 0;
 	u8 token;
 	u8 crc[4];
-	int len;
+	int len, len1 = 0;
+	bool ext_msg;
 
 	/* first SOP token */
 	ret = fusb302_i2c_read(chip, FUSB_REG_FIFOS, &token);
@@ -1434,24 +1573,93 @@ static int fusb302_pd_read_message(struct fusb302_chip *chip,
 				     (u8 *)&msg->header);
 	if (ret < 0)
 		return ret;
+
+	/*
+	 * For data messages, length is in 32bit words
+	 * but the logic gets trickier for EXT messages
+	 */
 	len = pd_header_cnt_le(msg->header) * 4;
-	/* add 4 to length to include the CRC */
-	if (len > PD_MAX_PAYLOAD * 4) {
-		fusb302_log(chip, "PD message too long %d", len);
+	ext_msg = le16_to_cpu(msg->header) & PD_HEADER_EXT_HDR;
+	/*
+	 * Per PD Rev 3.1 Ver 1.2, section 6.2.1.1.2
+	 */
+	if (ext_msg) {
+		int data_size;
+
+		/* Read the EXT header first */
+		ret = fusb302_i2c_block_read(chip, FUSB_REG_FIFOS, 2,
+						(u8 *)&msg->ext_msg.header);
+		if (ret < 0)
+			return ret;
+		/*
+		 * For chunked EXT messages, if the data size in the EXT
+		 * header is under PD_EXT_MAX_CHUNK_DATA, the payload is
+		 * padded to 4byte boundary and the length in 32bit words
+		 * is in the regular header, just like for data messages,
+		 * and the EXT header is treated like part of data payload.
+		 * No padding beyond the PD_EXT_MAX_CHUNK_DATA size, and
+		 * data size in the EXT header is in bytes, just like for
+		 * the unchunked EXT messages (not supported yet by tcpm,
+		 * but we need to be compliant.
+		 */
+		data_size = pd_ext_header_data_size_le(msg->ext_msg.header);
+		if (le16_to_cpu(msg->ext_msg.header) & PD_EXT_HDR_CHUNKED &&
+		    data_size < PD_EXT_MAX_CHUNK_DATA)
+			len -= 2; /* adjust for the consumed EXT header  */
+		else
+			len = data_size;
+	}
+	/*
+	 *  The max len is either PD_MAX_PAYLOAD (7) of 32bit words,
+	 *  or up to 260 bytes + ext header (PD Rev3.1 Ver 1.2 section 6.2.1).
+	 *  However, the pd_message struct only has space for 28 bytes
+	 *  and it would not be good to overrun it. TCPM does not support
+	 *  most of the EXT messages anyway, but it is important to get
+	 *  the len right, and consume the message, in order to read the
+	 *  CRC correctly.
+	 */
+	if (len > (ext_msg ? 10*PD_EXT_MAX_CHUNK_DATA : 4*PD_MAX_PAYLOAD)) {
+		fusb302_log(chip, "PD message len exceeds spec (%d)", len);
 		return -EINVAL;
 	}
+
+	/* Read the indicated len, up to the allocated size */
 	if (len > 0) {
-		ret = fusb302_i2c_block_read(chip, FUSB_REG_FIFOS, len,
-					     (u8 *)msg->payload);
+		int len_max = ext_msg
+			? PD_EXT_MAX_CHUNK_DATA :
+			4*PD_MAX_PAYLOAD;
+		len1 = len > len_max ? len_max : len;
+
+		ret = fusb302_i2c_block_read(chip, FUSB_REG_FIFOS, len1,
+			ext_msg ? (u8 *)msg->ext_msg.data
+				: (u8 *)msg->payload);
 		if (ret < 0)
 			return ret;
 	}
+
+	/*
+	 * If there is more (unchunked EXT message), consume and dump it
+	 * This alluws us to get to the CRC, and is also in line with
+	 * PD Rev1.3 Ver1.2 section 6.2.1.2.4
+	 */
+	if (len > len1 && ext_msg) {
+		u8 *trash = kmalloc(len-len1, GFP_KERNEL);
+		if (!trash)
+			return -ENOMEM;
+		ret = fusb302_i2c_block_read(chip, FUSB_REG_FIFOS, len-len1,
+						trash);
+		kfree(trash);
+		if (ret < 0)
+			return ret;
+	}
+
 	/* another 4 bytes to read CRC out */
 	ret = fusb302_i2c_block_read(chip, FUSB_REG_FIFOS, 4, crc);
 	if (ret < 0)
 		return ret;
-	fusb302_log(chip, "PD message header: %x", msg->header);
-	fusb302_log(chip, "PD message len: %d", len);
+	fusb302_log(chip, "PD message header: %#x, len: %d", msg->header, len);
+	fusb302_log(chip, "<== %s, type: %s", token2addr(token),
+						tcpm_msg2string(msg));
 
 	/*
 	 * Check if we've read off a GoodCRC message. If so then indicate to
@@ -1548,14 +1756,33 @@ static void fusb302_irq_work(struct work_struct *work)
 	}
 
 	if ((interrupt & FUSB_REG_INTERRUPT_BC_LVL) && intr_bc_lvl) {
-		fusb302_log(chip, "IRQ: BC_LVL, handler pending");
+		fusb302_log(chip, "IRQ: BC_LVL");
 		/*
 		 * as BC_LVL interrupt can be affected by PD activity,
 		 * apply delay to for the handler to wait for the PD
 		 * signaling to finish.
 		 */
-		mod_delayed_work(chip->wq, &chip->bc_lvl_handler,
-				 msecs_to_jiffies(T_BC_LVL_DEBOUNCE_DELAY_MS));
+		if (status0 & FUSB_REG_STATUS0_ACTIVITY) {
+			fusb302_log(chip, "CC activities detected, delay handling");
+			/*
+			 * If we push off the handler, we don't want more
+			 * BC_LVL interrupts until the PD activity has had time
+			 * to finish, otherwise we may end up pushing it off
+			 * more. Mask BC_LVL for duration of PD_T_PD_DEBOUNCE,
+			 * which is shorter than T_BC_LVL_DEBOUNCE_DELAY_MS.
+			 */
+			fusb302_update_bc_lvl(chip, false, PD_T_PD_DEBOUNCE);
+			mod_delayed_work(chip->wq, &chip->bc_lvl_handler,
+				msecs_to_jiffies(T_BC_LVL_DEBOUNCE_DELAY_MS));
+		} else {
+			/* We only need BC_LVL for one thing - to detect PDv3
+			 * collision avoidance signaling, and we need to process
+			 * that immediately. The handler will check the activity
+			 * bit again, and either delay again, or check SINK_TX_XX
+			 * transitions and discard evertything else. We will get
+			 * cable disconnect from VBUS_OK anyway */
+			mod_delayed_work(chip->wq, &chip->bc_lvl_handler, 0);
+		}
 	}
 
 	if ((interrupt & FUSB_REG_INTERRUPT_COMP_CHNG) && intr_comp_chng) {
@@ -1566,6 +1793,7 @@ static void fusb302_irq_work(struct work_struct *work)
 			/* cc level > Rd_threshold, detach */
 			chip->cc1 = TYPEC_CC_OPEN;
 			chip->cc2 = TYPEC_CC_OPEN;
+			fusb302_update_bc_lvl(chip, false, 0);
 			tcpm_cc_change(chip->tcpm_port);
 		}
 	}
@@ -1591,7 +1819,8 @@ static void fusb302_irq_work(struct work_struct *work)
 	}
 
 	if (interrupta & FUSB_REG_INTERRUPTA_TX_SUCCESS) {
-		fusb302_log(chip, "IRQ: PD tx success");
+		fusb302_log(chip, "IRQ: PD tx success, reading pd_msg");
+		memset(&pd_msg, 0, sizeof pd_msg);
 		ret = fusb302_pd_read_message(chip, &pd_msg);
 		if (ret < 0) {
 			fusb302_log(chip,
@@ -1644,6 +1873,33 @@ static int init_gpio(struct fusb302_chip *chip)
 	return 0;
 }
 
+static int init_gpio_cc_orient(struct fusb302_chip *chip)
+{
+	struct device *dev = chip->dev;
+	int ret = 0;
+
+	chip->gpio_ccdir = of_get_named_gpio(dev->of_node,
+			"fusb302,orientation_gpio", 0);
+	if (!gpio_is_valid(chip->gpio_ccdir)) {
+		dev_err(dev, "invalid orientation gpio!\n");
+		chip->gpio_ccdir = 0;
+		return -EINVAL;
+	}
+
+	ret = gpio_request(chip->gpio_ccdir, "fusb302,orientation_gpio");
+	if (ret < 0) {
+		dev_err(dev, "failed to request orientation gpio: %d\n", chip->gpio_ccdir);
+		return -EBUSY;
+	} else
+		dev_dbg(dev, "orientation gpio: %d REQUESTED...\n", chip->gpio_ccdir);
+	/* set default polarity CC1 */
+	ret = gpio_direction_output(chip->gpio_ccdir, 0);
+	if (ret)
+		dev_err(dev, "unable to set orientation gpio: %d\n", chip->gpio_ccdir);
+
+	return ret;
+}
+
 #define PDO_FIXED_FLAGS \
 	(PDO_FIXED_DUAL_ROLE | PDO_FIXED_DATA_SWAP | PDO_FIXED_USB_COMM)
 
@@ -1674,6 +1930,103 @@ static struct fwnode_handle *fusb302_fwnode_get(struct device *dev)
 		fwnode = fwnode_create_software_node(port_props, NULL);
 
 	return fwnode;
+}
+
+#if IS_ENABLED(CONFIG_TYPEC_QTI_ALTMODE)
+#include <linux/usb/typec_dp.h>
+
+static struct typec_altmode_desc supported_modes[] = {
+	{
+		.svid = USB_TYPEC_DP_SID,
+		.mode = USB_TYPEC_DP_MODE,
+		.roles = TYPEC_PORT_DRD,
+	},
+	{ },
+};
+
+extern int tcpm_set_port_altmode(struct tcpm_port *port, int idx, struct typec_altmode *alt);
+extern struct typec_port *tcpm_typec_port_get(struct tcpm_port *port);
+
+static int fusb302_register_altmodes(struct fusb302_chip *chip)
+{
+	struct tcpm_port *port = chip->tcpm_port;
+	struct typec_altmode_desc *desc;
+	unsigned char all_assignments = BIT(DP_PIN_ASSIGN_C) |
+			BIT(DP_PIN_ASSIGN_D) | BIT(DP_PIN_ASSIGN_E);
+	struct typec_altmode *alt;
+	int i, ret;
+
+	for (i = 0;; i++) {
+		desc = &supported_modes[i];
+		if (!desc->svid)
+			break;
+		/* We can't rely on the firmware with the capabilities. */
+		desc->vdo |= DP_CAP_DP_SIGNALING | DP_CAP_RECEPTACLE;
+		/* Claiming that we support all pin assignments */
+		desc->vdo |= all_assignments << 8;
+		desc->vdo |= all_assignments << 16;
+		alt = typec_port_register_altmode(tcpm_typec_port_get(port), desc);
+		if (IS_ERR(alt))
+			return -EINVAL;
+
+		MOTO_ALTMODE("registered altmode[%d]=%p: svid%04Xm%02X to typec_port %p",
+			i, alt, desc->svid, desc->mode, tcpm_typec_port_get(port));
+		desc++;
+		ret = tcpm_set_port_altmode(port, i, alt);
+		if (ret)
+			dev_err(chip->dev, "error adding altmode[%d]", i);
+		typec_altmode_set_drvdata(alt, port);
+	}
+
+	return 0;
+}
+#else
+static int fusb302_register_altmodes(struct fusb302_chip *chip) { return -ENOTSUPP; }
+#endif
+
+#define TCPM_REGISTER_DELAY 200
+
+static void fusb302_tcpm_connect_work(struct work_struct *work)
+{
+	struct fusb302_chip *chip = container_of(work, struct fusb302_chip,
+					tcpm_connect.work);
+	int ret = 0;
+
+	chip->tcpm_port = tcpm_register_port(chip->dev, &chip->tcpc_dev);
+	if (IS_ERR(chip->tcpm_port)) {
+		dev_dbg(chip->dev, "deferring tcpm port registration\n");
+		queue_delayed_work(chip->wq, &chip->tcpm_connect,
+				msecs_to_jiffies(TCPM_REGISTER_DELAY));
+		return;
+	}
+
+	fwnode_handle_put(chip->tcpc_dev.fwnode);
+	ret = fusb302_register_altmodes(chip);
+	if (ret)
+		dev_warn(chip->dev, "error registering altmodes, ret=%d\n", ret);
+
+	enable_irq_wake(chip->gpio_int_n_irq);
+	enable_irq(chip->gpio_int_n_irq);
+	MOTO_ALTMODE("TCPM port registered");
+}
+
+static enum hrtimer_restart bc_lvl_timer_handler(struct hrtimer *timer)
+{
+	struct fusb302_chip *chip = container_of(timer, struct fusb302_chip,
+					bc_lvl_timer);
+	kthread_queue_work(chip->kw, &chip->event_work);
+	return HRTIMER_NORESTART;
+}
+
+static void fusb302_event_handler(struct kthread_work *work)
+{
+	struct fusb302_chip *chip = container_of(work, struct fusb302_chip,
+					event_work);
+	mutex_lock(&chip->lock);
+	fusb302_log(chip, "BC_LVL hrtimer, status: (%s)",
+		chip->intr_bc_lvl  ? "unmasked" : "masked");
+	fusb302_update_bc_lvl(chip, true, 0);
+	mutex_unlock(&chip->lock);
 }
 
 static int fusb302_probe(struct i2c_client *client,
@@ -1711,9 +2064,24 @@ static int fusb302_probe(struct i2c_client *client,
 			return -EPROBE_DEFER;
 	}
 
+	chip->vdd = devm_regulator_get(chip->dev, "vdd");
+	if (IS_ERR(chip->vdd)) {
+		dev_err(&client->dev, "VDD not loaded\n");
+		return PTR_ERR(chip->vdd);
+	}
+	regulator_enable(chip->vdd);
+	dev_dbg(&client->dev, "VDD is %si\n",
+		regulator_is_enabled(chip->vdd) ? "On" : "Off");
+
 	chip->vbus = devm_regulator_get(chip->dev, "vbus");
-	if (IS_ERR(chip->vbus))
-		return PTR_ERR(chip->vbus);
+	if (IS_ERR(chip->vbus)) {
+		dev_warn(&client->dev, "VBUS not loaded\n");
+	}
+
+	chip->vconn = devm_regulator_get(chip->dev, "vconn");
+	if (IS_ERR(chip->vconn)) {
+		dev_warn(&client->dev, "VCONN not loaded\n");
+	}
 
 	chip->wq = create_singlethread_workqueue(dev_name(chip->dev));
 	if (!chip->wq)
@@ -1722,8 +2090,25 @@ static int fusb302_probe(struct i2c_client *client,
 	spin_lock_init(&chip->irq_lock);
 	INIT_WORK(&chip->irq_work, fusb302_irq_work);
 	INIT_DELAYED_WORK(&chip->bc_lvl_handler, fusb302_bc_lvl_handler_work);
-	init_tcpc_dev(&chip->tcpc_dev);
+	INIT_DELAYED_WORK(&chip->tcpm_connect, fusb302_tcpm_connect_work);
+
+	/* call debugfs early to init logbuf mutex */
 	fusb302_debugfs_init(chip);
+
+	ret = init_tcpc_dev(&chip->tcpc_dev);
+	if (ret < 0) {
+		ret = -ENODEV;
+		destroy_workqueue(chip->wq);
+		dev_err(&client->dev, "init ERROR, no device?? ret=%d\n", ret);
+		return ret;
+	}
+
+	chip->kw = kthread_create_worker(0, dev_name(dev));
+	if (IS_ERR(chip->kw)) {
+		ret = -ENOMEM;
+		goto destroy_workqueue;
+	}
+	sched_set_fifo(chip->kw->task);
 
 	if (client->irq) {
 		chip->gpio_int_n_irq = client->irq;
@@ -1739,33 +2124,37 @@ static int fusb302_probe(struct i2c_client *client,
 		goto destroy_workqueue;
 	}
 
-	chip->tcpm_port = tcpm_register_port(&client->dev, &chip->tcpc_dev);
-	if (IS_ERR(chip->tcpm_port)) {
-		fwnode_handle_put(chip->tcpc_dev.fwnode);
-		ret = PTR_ERR(chip->tcpm_port);
-		if (ret != -EPROBE_DEFER)
-			dev_err(dev, "cannot register tcpm port, ret=%d", ret);
-		goto destroy_workqueue;
-	}
-
 	ret = request_irq(chip->gpio_int_n_irq, fusb302_irq_intn,
 			  IRQF_ONESHOT | IRQF_TRIGGER_LOW,
 			  "fsc_interrupt_int_n", chip);
 	if (ret < 0) {
 		dev_err(dev, "cannot request IRQ for GPIO Int_N, ret=%d", ret);
-		goto tcpm_unregister_port;
+		goto fwnode_put;
 	}
-	enable_irq_wake(chip->gpio_int_n_irq);
+	/* disabling IRQ until TCMP port registration complete
+	 * to prevent TCPM API called on un-initialized port
+	 */
+	disable_irq(chip->gpio_int_n_irq);
+	queue_delayed_work(chip->wq, &chip->tcpm_connect,
+				msecs_to_jiffies(TCPM_REGISTER_DELAY));
+
+	ret = init_gpio_cc_orient(chip);
+	if (ret < 0)
+		dev_err(dev, "failed to init orientation gpio: %d, ret=%d\n",
+					chip->gpio_ccdir, ret);
 	i2c_set_clientdata(client, chip);
 
+	kthread_init_work(&chip->event_work, fusb302_event_handler);
+	hrtimer_init(&chip->bc_lvl_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	chip->bc_lvl_timer.function = bc_lvl_timer_handler;
 	return ret;
 
-tcpm_unregister_port:
-	tcpm_unregister_port(chip->tcpm_port);
+fwnode_put:
 	fwnode_handle_put(chip->tcpc_dev.fwnode);
 destroy_workqueue:
 	fusb302_debugfs_exit(chip);
 	destroy_workqueue(chip->wq);
+	kthread_destroy_worker(chip->kw);
 
 	return ret;
 }
@@ -1774,6 +2163,7 @@ static int fusb302_remove(struct i2c_client *client)
 {
 	struct fusb302_chip *chip = i2c_get_clientdata(client);
 
+	gpio_free(chip->gpio_ccdir);
 	disable_irq_wake(chip->gpio_int_n_irq);
 	free_irq(chip->gpio_int_n_irq, chip);
 	cancel_work_sync(&chip->irq_work);
@@ -1781,6 +2171,8 @@ static int fusb302_remove(struct i2c_client *client)
 	tcpm_unregister_port(chip->tcpm_port);
 	fwnode_handle_put(chip->tcpc_dev.fwnode);
 	destroy_workqueue(chip->wq);
+	kthread_destroy_worker(chip->kw);
+	fusb302_update_bc_lvl(chip, false, 0);
 	fusb302_debugfs_exit(chip);
 
 	return 0;
@@ -1790,6 +2182,9 @@ static int fusb302_pm_suspend(struct device *dev)
 {
 	struct fusb302_chip *chip = dev->driver_data;
 	unsigned long flags;
+
+	// MOTO_ALTMODE("stub");
+	// return 0;
 
 	spin_lock_irqsave(&chip->irq_lock, flags);
 	chip->irq_suspended = true;
@@ -1804,6 +2199,9 @@ static int fusb302_pm_resume(struct device *dev)
 {
 	struct fusb302_chip *chip = dev->driver_data;
 	unsigned long flags;
+
+	// MOTO_ALTMODE("stub");
+	// return 0;
 
 	spin_lock_irqsave(&chip->irq_lock, flags);
 	if (chip->irq_while_suspended) {

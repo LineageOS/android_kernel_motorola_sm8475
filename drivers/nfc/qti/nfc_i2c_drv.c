@@ -276,6 +276,9 @@ static const struct file_operations nfc_i2c_dev_fops = {
 	.open = nfc_dev_open,
 	.release = nfc_dev_close,
 	.unlocked_ioctl = nfc_dev_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = nfc_compat_dev_ioctl,
+#endif
 };
 
 int nfc_i2c_dev_probe(struct i2c_client *client, const struct i2c_device_id *id)
@@ -388,22 +391,21 @@ int nfc_i2c_dev_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	ret = nfcc_hw_check(nfc_dev);
 	if (ret || nfc_dev->nfc_state == NFC_STATE_UNKNOWN) {
 		pr_err("nfc hw check failed ret %d\n", ret);
-		goto err_nfcc_hw_check;
 	}
 
 	device_init_wakeup(&client->dev, true);
+	enable_irq_wake(client->irq);
 	i2c_dev->irq_wake_up = false;
 	nfc_dev->is_ese_session_active = false;
 
 	pr_info("%s success\n", __func__);
 	return 0;
 
-err_nfcc_hw_check:
+err_ldo_config_failed:
 	if (nfc_dev->reg) {
 		nfc_ldo_unvote(nfc_dev);
 		regulator_put(nfc_dev->reg);
 	}
-err_ldo_config_failed:
 	free_irq(client->irq, nfc_dev);
 err_nfc_misc_unregister:
 	nfc_misc_unregister(nfc_dev, DEV_COUNT);
@@ -497,8 +499,9 @@ int nfc_i2c_dev_suspend(struct device *device)
 							i2c_dev->irq_enabled);
 
 	if (device_may_wakeup(&client->dev) && i2c_dev->irq_enabled) {
-		if (!enable_irq_wake(client->irq))
-			i2c_dev->irq_wake_up = true;
+		//if (!enable_irq_wake(client->irq))
+		//	i2c_dev->irq_wake_up = true;
+		i2c_dev->irq_wake_up = true;
 	}
 	return 0;
 }
@@ -520,8 +523,9 @@ int nfc_i2c_dev_resume(struct device *device)
 							i2c_dev->irq_wake_up);
 
 	if (device_may_wakeup(&client->dev) && i2c_dev->irq_wake_up) {
-		if (!disable_irq_wake(client->irq))
-			i2c_dev->irq_wake_up = false;
+		//if (!disable_irq_wake(client->irq))
+		//	i2c_dev->irq_wake_up = false;
+		i2c_dev->irq_wake_up = false;
 	}
 	return 0;
 }

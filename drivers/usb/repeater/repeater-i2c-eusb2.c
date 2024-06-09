@@ -17,6 +17,7 @@
 #include <linux/qti-regmap-debugfs.h>
 #include <linux/regulator/consumer.h>
 #include <linux/types.h>
+#include <linux/usb/dwc3-msm.h>
 #include <linux/usb/repeater.h>
 
 #define EUSB2_3P0_VOL_MIN			3075000 /* uV */
@@ -70,6 +71,7 @@
 enum eusb2_repeater_type {
 	TI_REPEATER,
 	NXP_REPEATER,
+	DIODES_REPEATER,
 };
 
 struct i2c_repeater_chip {
@@ -88,7 +90,9 @@ struct eusb2_repeater {
 
 	struct gpio_desc		*reset_gpiod;
 	u32				*param_override_seq;
-	u8				param_override_seq_cnt;
+	u32				param_override_seq_cnt;
+	u32				*host_param_override_seq;
+	u32				host_param_override_seq_cnt;
 };
 
 static const struct regmap_config eusb2_i2c_regmap = {
@@ -129,13 +133,13 @@ static int eusb2_i2c_write_reg(struct eusb2_repeater *er, u8 reg, u8 val)
 	return 0;
 }
 
-static void eusb2_repeater_update_seq(struct eusb2_repeater *er, u32 *seq, u8 cnt)
+static void eusb2_repeater_update_seq(struct eusb2_repeater *er, u32 *seq, u32 cnt)
 {
 	int i;
 
-	dev_dbg(er->ur.dev, "param override seq count:%d\n", cnt);
+	dev_info(er->ur.dev, "param override seq count:%d\n", cnt);
 	for (i = 0; i < cnt; i = i+2) {
-		dev_dbg(er->ur.dev, "write 0x%02x to 0x%02x\n", seq[i], seq[i+1]);
+		dev_info(er->ur.dev, "write 0x%02x to 0x%02x\n", seq[i], seq[i+1]);
 		eusb2_i2c_write_reg(er, seq[i+1], seq[i]);
 	}
 }
@@ -258,16 +262,27 @@ static int eusb2_repeater_init(struct usb_repeater *ur)
 	case NXP_REPEATER:
 		eusb2_i2c_read_reg(er, REVISION_ID, &reg_val);
 		break;
+	case DIODES_REPEATER:
+		reg_val = 0;
+		break;
 	default:
+		reg_val = 0;
 		dev_err(er->ur.dev, "Invalid repeater\n");
 	}
 
 	dev_info(er->ur.dev, "eUSB2 repeater version = 0x%x ur->flags:0x%x\n", reg_val, ur->flags);
 
-	/* override init sequence using devicetree based values */
-	if (er->param_override_seq_cnt)
-		eusb2_repeater_update_seq(er, er->param_override_seq,
-					er->param_override_seq_cnt);
+	if (ur->flags & PHY_HOST_MODE) {
+		/* override host init sequence using devicetree based values */
+		if (er->host_param_override_seq_cnt)
+			eusb2_repeater_update_seq(er, er->host_param_override_seq,
+						er->host_param_override_seq_cnt);
+	} else {
+		/* override init sequence using devicetree based values */
+		if (er->param_override_seq_cnt)
+			eusb2_repeater_update_seq(er, er->param_override_seq,
+						er->param_override_seq_cnt);
+	}
 
 	dev_info(er->ur.dev, "eUSB2 repeater init\n");
 
@@ -307,6 +322,9 @@ static struct i2c_repeater_chip repeater_chip[] = {
 	},
 	[TI_REPEATER] = {
 		.repeater_type = TI_REPEATER,
+	},
+	[DIODES_REPEATER] = {
+		.repeater_type = DIODES_REPEATER,
 	}
 };
 
@@ -318,6 +336,10 @@ static const struct of_device_id eusb2_repeater_id_table[] = {
 	{
 		.compatible = "ti,eusb2-repeater",
 		.data = &repeater_chip[TI_REPEATER]
+	},
+	{
+		.compatible = "diodes,eusb2-repeater",
+		.data = &repeater_chip[DIODES_REPEATER]
 	},
 	{ },
 };
@@ -400,6 +422,36 @@ static int eusb2_repeater_i2c_probe(struct i2c_client *client)
 				er->param_override_seq_cnt);
 		if (ret) {
 			dev_err(dev, "qcom,param-override-seq read failed %d\n",
+									ret);
+			goto err_probe;
+		}
+	}
+
+	num_elem = of_property_count_elems_of_size(dev->of_node,
+				"qcom,host-param-override-seq",
+				sizeof(*er->host_param_override_seq));
+	if (num_elem > 0) {
+		if (num_elem % 2) {
+			dev_err(dev, "invalid host_param_override_seq_len\n");
+			ret = -EINVAL;
+			goto err_probe;
+		}
+
+		er->host_param_override_seq_cnt = num_elem;
+		er->host_param_override_seq = devm_kcalloc(dev,
+				er->host_param_override_seq_cnt,
+				sizeof(*er->host_param_override_seq), GFP_KERNEL);
+		if (!er->host_param_override_seq) {
+			ret = -ENOMEM;
+			goto err_probe;
+		}
+
+		ret = of_property_read_u32_array(dev->of_node,
+				"qcom,host-param-override-seq",
+				er->host_param_override_seq,
+				er->host_param_override_seq_cnt);
+		if (ret) {
+			dev_err(dev, "qcom,host-param-override-seq read failed %d\n",
 									ret);
 			goto err_probe;
 		}

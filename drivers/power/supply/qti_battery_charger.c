@@ -51,9 +51,9 @@
 
 /* Generic definitions */
 #define MAX_STR_LEN			128
-#define BC_WAIT_TIME_MS			1000
-#define WLS_FW_PREPARE_TIME_MS		1000
-#define WLS_FW_WAIT_TIME_MS		500
+#define BC_WAIT_TIME_MS			2000
+#define WLS_FW_PREPARE_TIME_MS		2000
+#define WLS_FW_WAIT_TIME_MS		5000
 #define WLS_FW_UPDATE_TIME_MS		1000
 #define WLS_FW_BUF_SIZE			128
 #define DEFAULT_RESTRICT_FCC_UA		1000000
@@ -62,6 +62,8 @@ enum usb_connector_type {
 	USB_CONNECTOR_TYPE_TYPEC,
 	USB_CONNECTOR_TYPE_MICRO_USB,
 };
+
+static bool wls_fw_udating = false;
 
 enum psy_type {
 	PSY_TYPE_BATTERY,
@@ -133,6 +135,12 @@ enum wireless_property_id {
 	WLS_TYPE,
 	WLS_BOOST_EN,
 	WLS_PROP_MAX,
+};
+
+enum wireless_vendor {
+	WLS_IDT,
+	WLS_CPS,
+	WLS_CPS4019,
 };
 
 enum {
@@ -257,8 +265,10 @@ struct battery_chg_dev {
 	bool				wls_not_supported;
 	bool				wls_fw_update_reqd;
 	u32				wls_fw_version;
+	u32				wls_fw_vendor;
 	u16				wls_fw_crc;
 	u32				wls_fw_update_time_ms;
+	int				wls_fw_size_min;
 	struct notifier_block		reboot_notifier;
 	u32				thermal_fcc_ua;
 	u32				restrict_fcc_ua;
@@ -267,11 +277,16 @@ struct battery_chg_dev {
 	u32				thermal_fcc_step;
 	u32				connector_type;
 	u32				usb_prev_mode;
+	u32				tbatt_filter_interval_ms;
+	u32				tbatt_filter_offset_degree;
+	int				tbatt_filter_save_degree;
+	bool				tbatt_filter_en;
 	bool				restrict_chg_en;
 	/* To track the driver initialization status */
 	bool				initialized;
 	bool				notify_en;
 	bool				error_prop;
+	struct power_supply		*combo_batt_psy;
 };
 
 static const int battery_prop_map[BATT_PROP_MAX] = {
@@ -350,6 +365,34 @@ int unregister_hboost_event_notifier(struct notifier_block *nb)
 }
 EXPORT_SYMBOL(unregister_hboost_event_notifier);
 
+static bool jiffies_timer_expire(struct battery_chg_dev *bcdev, bool clear_jiffies) {
+	unsigned long cur_jiffies = jiffies;
+	static unsigned long last_jiffies = 0;
+	unsigned long intr_timeout = msecs_to_jiffies(bcdev->tbatt_filter_interval_ms);
+	bool ret = false;
+
+	if (!last_jiffies)
+		last_jiffies = cur_jiffies;
+
+	if (time_after(cur_jiffies, intr_timeout + last_jiffies))
+		ret = true;
+	else
+		ret = false;
+
+	if (ret) {
+              pr_err("expire:%dms, curr_jiffies:%dms, last jiffies:%d",
+                              bcdev->tbatt_filter_interval_ms, jiffies_to_msecs(cur_jiffies), jiffies_to_msecs(last_jiffies));
+		last_jiffies = cur_jiffies;
+
+	}
+
+	if (clear_jiffies) {
+		last_jiffies = cur_jiffies;
+	}
+
+	return ret;
+}
+
 static int battery_chg_fw_write(struct battery_chg_dev *bcdev, void *data,
 				int len)
 {
@@ -357,7 +400,7 @@ static int battery_chg_fw_write(struct battery_chg_dev *bcdev, void *data,
 
 	down_read(&bcdev->state_sem);
 	if (atomic_read(&bcdev->state) == PMIC_GLINK_STATE_DOWN) {
-		pr_debug("glink state is down\n");
+		pr_err("glink state is down\n");
 		up_read(&bcdev->state_sem);
 		return -ENOTCONN;
 	}
@@ -368,7 +411,7 @@ static int battery_chg_fw_write(struct battery_chg_dev *bcdev, void *data,
 		rc = wait_for_completion_timeout(&bcdev->fw_buf_ack,
 					msecs_to_jiffies(WLS_FW_WAIT_TIME_MS));
 		if (!rc) {
-			pr_err("Error, timed out sending message\n");
+			pr_err("Error, timed out sending message, tims_ms %d\n", WLS_FW_WAIT_TIME_MS);
 			up_read(&bcdev->state_sem);
 			return -ETIMEDOUT;
 		}
@@ -441,6 +484,11 @@ static int write_property_id(struct battery_chg_dev *bcdev,
 {
 	struct battery_charger_req_msg req_msg = { { 0 } };
 
+	if (wls_fw_udating) {
+		pr_debug("wireless doing fw update, refuse to  write_property_id");
+		return -ETIMEDOUT;
+	}
+
 	req_msg.property_id = prop_id;
 	req_msg.battery_id = 0;
 	req_msg.value = val;
@@ -459,6 +507,11 @@ static int read_property_id(struct battery_chg_dev *bcdev,
 			struct psy_state *pst, u32 prop_id)
 {
 	struct battery_charger_req_msg req_msg = { { 0 } };
+
+	if (wls_fw_udating && prop_id != USB_ADAP_TYPE) {
+		pr_debug("wireless doing fw update, refuse to  read_property_id");
+		return -ETIMEDOUT;
+	}
 
 	req_msg.property_id = prop_id;
 	req_msg.battery_id = 0;
@@ -1029,8 +1082,18 @@ static int wls_psy_get_prop(struct power_supply *psy,
 		return prop_id;
 
 	rc = read_property_id(bcdev, pst, prop_id);
+#ifdef QCOM_BASE
 	if (rc < 0)
 		return rc;
+#else
+	if (rc == -ETIMEDOUT) {
+		pr_debug("read prop:%d timeout, use old prop value\n", prop_id);
+		rc = 0;
+	} else if (rc < 0) {
+		pr_err("read prop:%d error, rc = %d", prop_id, rc);
+		return rc;
+	}
+#endif
 
 	pval->intval = pst->prop[prop_id];
 
@@ -1149,8 +1212,18 @@ static int usb_psy_get_prop(struct power_supply *psy,
 		return prop_id;
 
 	rc = read_property_id(bcdev, pst, prop_id);
+#ifdef QCOM_BASE
 	if (rc < 0)
 		return rc;
+#else
+	if (rc == -ETIMEDOUT) {
+		pr_debug("read prop:%d timeout, use old prop value\n", prop_id);
+		rc = 0;
+	} else if (rc < 0) {
+		pr_err("read prop:%d error, rc = %d", prop_id, rc);
+		return rc;
+	}
+#endif
 
 	pval->intval = pst->prop[prop_id];
 	if (prop == POWER_SUPPLY_PROP_TEMP)
@@ -1257,7 +1330,7 @@ static int __battery_psy_set_charge_current(struct battery_chg_dev *bcdev,
 static int battery_psy_set_charge_current(struct battery_chg_dev *bcdev,
 					int val)
 {
-	int rc;
+	int rc = 0;
 	u32 fcc_ua, prev_fcc_ua;
 
 	if (!bcdev->num_thermal_levels)
@@ -1280,13 +1353,54 @@ static int battery_psy_set_charge_current(struct battery_chg_dev *bcdev,
 	prev_fcc_ua = bcdev->thermal_fcc_ua;
 	bcdev->thermal_fcc_ua = fcc_ua;
 
-	rc = __battery_psy_set_charge_current(bcdev, fcc_ua);
-	if (!rc)
-		bcdev->curr_thermal_level = val;
-	else
-		bcdev->thermal_fcc_ua = prev_fcc_ua;
+	if (prev_fcc_ua != bcdev->thermal_fcc_ua) {
+		rc = __battery_psy_set_charge_current(bcdev, fcc_ua);
+		if (!rc)
+			bcdev->curr_thermal_level = val;
+		else
+			bcdev->thermal_fcc_ua = prev_fcc_ua;
+	}
 
 	return rc;
+}
+
+static int battery_psy_set_cycle_count(struct battery_chg_dev *bcdev,
+					int CycleCount)
+{
+	int rc;
+
+	rc = write_property_id(bcdev, &bcdev->psy_list[PSY_TYPE_BATTERY],
+				BATT_CYCLE_COUNT, CycleCount);
+	if (rc < 0) {
+		pr_err("Failed to set cycle count %d, rc=%d\n", CycleCount, rc);
+	} else {
+		pr_err("Set CycleCount to %d\n", CycleCount);
+	}
+
+	return rc;
+}
+static int tbatt_filter_handler(struct battery_chg_dev *bcdev, int batt_temp)
+{
+	int ret = batt_temp;
+	if (batt_temp == -400)
+		return ret;
+
+	if (!bcdev->tbatt_filter_save_degree) {
+		bcdev->tbatt_filter_save_degree = batt_temp;
+		jiffies_timer_expire(bcdev, true);
+		ret = batt_temp;
+	} else {
+		if (abs(bcdev->tbatt_filter_save_degree - batt_temp) > bcdev->tbatt_filter_offset_degree &&
+			!jiffies_timer_expire(bcdev, false)) {
+			ret = bcdev->tbatt_filter_save_degree;
+		 	pr_err("fliter out tbatt: %d, report last temp %d\n", batt_temp, bcdev->tbatt_filter_save_degree);
+		} else {
+			jiffies_timer_expire(bcdev, true);
+			ret = batt_temp;
+			bcdev->tbatt_filter_save_degree = batt_temp;
+		}
+	}
+	return ret;
 }
 
 static int battery_psy_get_prop(struct power_supply *psy,
@@ -1311,8 +1425,18 @@ static int battery_psy_get_prop(struct power_supply *psy,
 		return prop_id;
 
 	rc = read_property_id(bcdev, pst, prop_id);
+#ifdef QCOM_BASE
 	if (rc < 0)
 		return rc;
+#else
+	if (rc == -ETIMEDOUT) {
+		pr_err("read prop:%d timeout, use old prop value\n", prop_id);
+		rc = 0;
+	} else if (rc < 0) {
+		pr_err("read prop:%d error, rc = %d", prop_id, rc);
+		return rc;
+	}
+#endif
 
 	switch (prop) {
 	case POWER_SUPPLY_PROP_MODEL_NAME:
@@ -1320,12 +1444,20 @@ static int battery_psy_get_prop(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
 		pval->intval = DIV_ROUND_CLOSEST(pst->prop[prop_id], 100);
+		if (bcdev->combo_batt_psy) {
+			power_supply_get_property(bcdev->combo_batt_psy,
+						prop, pval);
+		}
 		if (IS_ENABLED(CONFIG_QTI_PMIC_GLINK_CLIENT_DEBUG) &&
 		   (bcdev->fake_soc >= 0 && bcdev->fake_soc <= 100))
 			pval->intval = bcdev->fake_soc;
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
-		pval->intval = DIV_ROUND_CLOSEST((int)pst->prop[prop_id], 10);
+		if (bcdev->tbatt_filter_en) {
+			pval->intval = tbatt_filter_handler(bcdev, DIV_ROUND_CLOSEST((int)pst->prop[prop_id], 10));
+		} else {
+			pval->intval = DIV_ROUND_CLOSEST((int)pst->prop[prop_id], 10);
+		}
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
 		pval->intval = bcdev->curr_thermal_level;
@@ -1333,6 +1465,17 @@ static int battery_psy_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT_MAX:
 		pval->intval = bcdev->num_thermal_levels;
 		break;
+	case POWER_SUPPLY_PROP_STATUS:
+	case POWER_SUPPLY_PROP_CURRENT_NOW:
+	case POWER_SUPPLY_PROP_CHARGE_FULL:
+	case POWER_SUPPLY_PROP_CHARGE_COUNTER:
+	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
+		if (bcdev->combo_batt_psy) {
+			pval->intval = pst->prop[prop_id];
+			power_supply_get_property(bcdev->combo_batt_psy,
+						prop, pval);
+			break;
+		}
 	default:
 		pval->intval = pst->prop[prop_id];
 		break;
@@ -1350,6 +1493,8 @@ static int battery_psy_set_prop(struct power_supply *psy,
 	switch (prop) {
 	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
 		return battery_psy_set_charge_current(bcdev, pval->intval);
+	case POWER_SUPPLY_PROP_CYCLE_COUNT:
+		return battery_psy_set_cycle_count(bcdev, pval->intval);
 	default:
 		return -EINVAL;
 	}
@@ -1362,6 +1507,7 @@ static int battery_psy_prop_is_writeable(struct power_supply *psy,
 {
 	switch (prop) {
 	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
+	case POWER_SUPPLY_PROP_CYCLE_COUNT:
 		return 1;
 	default:
 		break;
@@ -1446,6 +1592,18 @@ static int battery_chg_init_psy(struct battery_chg_dev *bcdev)
 		return rc;
 	}
 
+	if (of_find_property(bcdev->dev->of_node, "mmi,combo-batt-psy", NULL)) {
+		bcdev->combo_batt_psy = devm_power_supply_get_by_phandle(
+						bcdev->dev,
+						"mmi,combo-batt-psy");
+		if (IS_ERR_OR_NULL(bcdev->combo_batt_psy)) {
+			pr_err("Couldn't get the combo-batt-psy\n");
+			if (!bcdev->combo_batt_psy)
+				return -ENODEV;
+			else
+				return PTR_ERR(bcdev->combo_batt_psy);
+		}
+	}
 	return 0;
 }
 
@@ -1506,7 +1664,7 @@ static int wireless_fw_send_firmware(struct battery_chg_dev *bcdev,
 		msg.fw_chunk_id = i + 1;
 		memcpy(msg.buf, ptr, WLS_FW_BUF_SIZE);
 
-		pr_debug("sending FW chunk %u\n", i + 1);
+		pr_info("sending FW chunk %u\n", i + 1);
 		rc = battery_chg_fw_write(bcdev, &msg, sizeof(msg));
 		if (rc < 0)
 			return rc;
@@ -1517,7 +1675,7 @@ static int wireless_fw_send_firmware(struct battery_chg_dev *bcdev,
 		memset(msg.buf, 0, WLS_FW_BUF_SIZE);
 		memcpy(msg.buf, ptr, partial_chunk_size);
 
-		pr_debug("sending partial FW chunk %u\n", i + 1);
+		pr_info("sending partial FW chunk %u\n", i + 1);
 		rc = battery_chg_fw_write(bcdev, &msg, sizeof(msg));
 		if (rc < 0)
 			return rc;
@@ -1547,12 +1705,18 @@ static int wireless_fw_check_for_update(struct battery_chg_dev *bcdev,
 #define IDT9415_FW_MINOR_VER_OFFSET		0x86
 #define IDT_FW_MAJOR_VER_OFFSET		0x94
 #define IDT_FW_MINOR_VER_OFFSET		0x96
+#define CPS_FW_MAJOR_VER_OFFSET		0xc4
+#define CPS_FW_MINOR_VER_OFFSET		0xc5
+#define CPS4019_FW_MAJOR_VER_OFFSET1		0xc4
+#define CPS4019_FW_MAJOR_VER_OFFSET2		0xc5
+#define CPS4019_FW_MINOR_VER_OFFSET1		0xc6
+#define CPS4019_FW_MINOR_VER_OFFSET2		0xc7
 static int wireless_fw_update(struct battery_chg_dev *bcdev, bool force)
 {
 	const struct firmware *fw;
 	struct psy_state *pst;
 	u32 version;
-	u16 maj_ver, min_ver;
+	u16 maj_ver, min_ver, maj_ver1, maj_ver2, min_ver1, min_ver2;
 	int rc;
 
 	if (!bcdev->wls_fw_name) {
@@ -1577,8 +1741,8 @@ static int wireless_fw_update(struct battery_chg_dev *bcdev, bool force)
 		if (rc < 0)
 			goto out;
 
-		if ((pst->prop[BATT_CAPACITY] / 100) < 50) {
-			pr_err("Battery SOC should be at least 50%% or connect charger\n");
+		if ((pst->prop[BATT_CAPACITY] / 100) < 20) {
+			pr_err("Battery SOC should be at least 20%% or connect charger\n");
 			rc = -EINVAL;
 			goto out;
 		}
@@ -1596,26 +1760,42 @@ static int wireless_fw_update(struct battery_chg_dev *bcdev, bool force)
 		goto release_fw;
 	}
 
-	if (fw->size < SZ_16K) {
-		pr_err("Invalid firmware size %zu\n", fw->size);
+	if (fw->size < bcdev->wls_fw_size_min) {
+		pr_err("Invalid firmware size (%zu < %zu)\n", fw->size, bcdev->wls_fw_size_min);
 		rc = -EINVAL;
 		goto release_fw;
 	}
 
-	if (strstr(bcdev->wls_fw_name, "9412")) {
+	if (bcdev->wls_fw_vendor == WLS_CPS4019) {
+		maj_ver1 = be16_to_cpu(*(__le16 *)(fw->data + CPS4019_FW_MAJOR_VER_OFFSET1));
+		maj_ver = maj_ver1 >> 8;
+		maj_ver2 = be16_to_cpu(*(__le16 *)(fw->data + CPS4019_FW_MAJOR_VER_OFFSET2));
+		maj_ver2 = maj_ver2 & 0xFF00;
+		maj_ver = maj_ver + maj_ver2;
+		min_ver1 = be16_to_cpu(*(__le16 *)(fw->data + CPS4019_FW_MINOR_VER_OFFSET1));
+		min_ver = min_ver1 >> 8;
+		min_ver2 = be16_to_cpu(*(__le16 *)(fw->data + CPS4019_FW_MINOR_VER_OFFSET2));
+		min_ver2 = min_ver2 & 0xFF00;
+		min_ver = min_ver + min_ver2;
+		pr_info("WLS_CPS 4019 maj_ver %#x, min_ver %#x\n", maj_ver, min_ver);
+		version = maj_ver << 16 | min_ver;
+	} else if (bcdev->wls_fw_vendor == WLS_CPS) {
+		maj_ver = be16_to_cpu(*(__le16 *)(fw->data + CPS_FW_MAJOR_VER_OFFSET));
+		maj_ver = maj_ver >> 8;
+		min_ver = be16_to_cpu(*(__le16 *)(fw->data + CPS_FW_MINOR_VER_OFFSET));
+		min_ver = min_ver >> 8;
+		pr_info("WLS_CPS maj_ver %#x, min_ver %#x\n", maj_ver, min_ver);
+		version = maj_ver << 16 | min_ver;
+	} else {
 		maj_ver = le16_to_cpu(*(__le16 *)(fw->data + IDT_FW_MAJOR_VER_OFFSET));
 		min_ver = le16_to_cpu(*(__le16 *)(fw->data + IDT_FW_MINOR_VER_OFFSET));
-	} else {
-		maj_ver = le16_to_cpu(*(__le16 *)(fw->data + IDT9415_FW_MAJOR_VER_OFFSET));
-		min_ver = le16_to_cpu(*(__le16 *)(fw->data + IDT9415_FW_MINOR_VER_OFFSET));
+		version = maj_ver << 16 | min_ver;
 	}
-	version = maj_ver << 16 | min_ver;
 
 	if (force)
 		version = UINT_MAX;
 
-	pr_debug("FW size: %zu version: %#x\n", fw->size, version);
-
+	pr_info("FW size: %zu version: %#x\n", fw->size, version);
 	rc = wireless_fw_check_for_update(bcdev, version, fw->size);
 	if (rc < 0) {
 		pr_err("Wireless FW update not needed, rc=%d\n", rc);
@@ -1629,7 +1809,7 @@ static int wireless_fw_update(struct battery_chg_dev *bcdev, bool force)
 
 	/* Wait for IDT to be setup by charger firmware */
 	msleep(WLS_FW_PREPARE_TIME_MS);
-
+        wls_fw_udating = true;
 	reinit_completion(&bcdev->fw_update_ack);
 	rc = wireless_fw_send_firmware(bcdev, fw);
 	if (rc < 0) {
@@ -1657,7 +1837,7 @@ release_fw:
 	release_firmware(fw);
 out:
 	pm_relax(bcdev->dev);
-
+	wls_fw_udating = false;
 	return rc;
 }
 
@@ -2118,6 +2298,20 @@ static int battery_chg_parse_dt(struct battery_chg_dev *bcdev)
 	int i, rc, len;
 	u32 prev, val;
 
+	bcdev->tbatt_filter_en = of_property_read_bool(node, "qcom,tbatt-filter-en");
+
+	rc = of_property_read_u32(node, "qcom,tbatt-filter-interval-ms",
+				&bcdev->tbatt_filter_interval_ms);
+	if (rc < 0) {
+		bcdev->tbatt_filter_interval_ms = 5000;
+	}
+
+	rc = of_property_read_u32(node, "qcom,tbatt-filter-offset-degree",
+				&bcdev->tbatt_filter_offset_degree);
+	if (rc < 0) {
+		bcdev->tbatt_filter_offset_degree = 50;
+	}
+
 	bcdev->wls_not_supported = of_property_read_bool(node,
 			"qcom,wireless-charging-not-supported");
 
@@ -2127,6 +2321,18 @@ static int battery_chg_parse_dt(struct battery_chg_dev *bcdev)
 	of_property_read_u32(node, "qcom,shutdown-voltage",
 				&bcdev->shutdown_volt_mv);
 
+	rc = of_property_read_u32(node, "qcom,wireless-fw-size_min",
+				&bcdev->wls_fw_size_min);
+	if (rc < 0) {
+		bcdev->wls_fw_size_min = SZ_16K;
+		pr_info("fw size min do not defined, use 16k as default (%d)\n",
+			__func__, bcdev->wls_fw_size_min);
+	}
+
+	if (bcdev->wls_fw_name && strstr(bcdev->wls_fw_name, "cps4019"))
+		bcdev->wls_fw_vendor = WLS_CPS4019;
+	else if (bcdev->wls_fw_name && strstr(bcdev->wls_fw_name, "cps"))
+		bcdev->wls_fw_vendor = WLS_CPS;
 
 	rc = read_property_id(bcdev, pst, BATT_CHG_CTRL_LIM_MAX);
 	if (rc < 0) {

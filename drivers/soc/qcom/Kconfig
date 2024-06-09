@@ -4,6 +4,126 @@
 #
 menu "Qualcomm SoC drivers"
 
+config MMI_DEVICE_DTBS
+	depends on ARCH_QCOM
+	default n
+	bool "Motorola Mobility Device DTBs"
+	help
+		Only include Motorola device specific DTBs to limit the number that
+		get built during kernel compilation.
+
+config MMI_FACTORY_BUILD
+	depends on ARCH_QCOM
+	default n
+	bool "Motorola Factory Build"
+	help
+	  kernel config item in common kernel of Moto factory build.
+
+config MMI_NON_GKI_DEBUG
+	depends on ARCH_QCOM
+	default n
+	bool "Motorola consolidate feature generic config"
+	help
+	  kernel config item in common kernel of Moto consolidate build.
+
+config HIPHI_DTB
+	depends on MMI_DEVICE_DTBS
+	default n
+	bool "Motorola Mobility Hiphi/Hiphic/Hiphid Device DTB"
+	help
+		Only include Motorola Hiphi/Hiphic/Hiphid device specific DTB.
+
+config IRONMN_DTB
+	depends on MMI_DEVICE_DTBS
+	default n
+	bool "Motorola Mobility Ironmn Device DTB"
+	help
+		Only include Motorola Ironmn device specific DTB.
+
+config LI_DTB
+	depends on MMI_DEVICE_DTBS
+	default n
+	bool "Motorola Mobility Li Device DTB"
+	help
+		Only include Motorola Li device specific DTB.
+
+config ONELI_DTB
+	depends on MMI_DEVICE_DTBS
+	default n
+	bool "Motorola Mobility OneLi Device DTB"
+	help
+		Only include Motorola OneLi device specific DTB.
+
+config ZEEKR_DTB
+	depends on MMI_DEVICE_DTBS
+	default n
+	bool "Motorola Mobility ZEEKR Device DTB"
+	help
+		Only include Motorola ZEEKR device specific DTB.
+
+config LYNKCO_DTB
+	depends on MMI_DEVICE_DTBS
+	default n
+	bool "Motorola Mobility LYNKCO Device DTB"
+	help
+		Only include Motorola LYNKCO device specific DTB.
+
+config EQS_DTB
+	depends on MMI_DEVICE_DTBS
+	default n
+	bool "Motorola Mobility OneLi Device DTB"
+	help
+		Only include Motorola EQS device specific DTB.
+
+config BRONCO_DTB
+        depends on MMI_DEVICE_DTBS
+        default n
+        bool "Motorola Mobility OneLi Device DTB"
+        help
+                Only include Motorola EQS device specific DTB.
+
+config FELIX_DTB
+	depends on MMI_DEVICE_DTBS
+	default n
+	bool "Motorola Mobility Felix Device DTB"
+	help
+		Only include Motorola Felix device specific DTB.
+
+config GENEVA_DTB
+	depends on MMI_DEVICE_DTBS
+	default n
+	bool "Motorola Mobility Geneva Device DTB"
+	help
+		Only include Motorola Geneva device specific DTB.
+
+config GENEVN_DTB
+	depends on MMI_DEVICE_DTBS
+	default n
+	bool "Motorola Mobility Genevn Device DTB"
+	help
+		Only include Motorola Genevn device specific DTB.
+
+config BOSTON_DTB
+        depends on MMI_DEVICE_DTBS
+        default n
+        bool "Motorola Mobility Boston Device DTB"
+        help
+                Only include Motorola Boston device specific DTB.
+
+config CUSCO_DTB
+        depends on MMI_DEVICE_DTBS
+        default n
+        bool "Motorola Mobility Cusco Device DTB"
+        help
+                Only include Motorola Cusco device specific DTB.
+
+config AVATRN_DTB
+        depends on MMI_DEVICE_DTBS
+        default n
+        bool "Motorola Mobility Avatrn Device DTB"
+        help
+                Only include Motorola Avatrn device specific DTB.
+
 config QCOM_AOSS_QMP
 	tristate "Qualcomm AOSS Driver"
 	depends on ARCH_QCOM || COMPILE_TEST
@@ -1058,8 +1178,8 @@ config QCOM_WDOG_BITE_EARLY_PANIC
 config QCOM_WATCHDOG_BARK_TIME
 	depends on QCOM_WDT_CORE
 	int "Qualcomm Technologies, Inc. Watchdog bark time in ms"
-	default 11000
-	range 11000 11000
+	default 16000
+	range 11000 22000
 	help
 	  The amount of time, in milliseconds, that should elapse after
 	  a watchdog timer reset before a bark interrupt is sent from the

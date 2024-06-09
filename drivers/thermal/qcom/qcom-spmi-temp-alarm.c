@@ -296,7 +296,13 @@ static int qpnp_tm_get_temp(void *data, int *temp)
 			mili_celsius = stage_temp_min;
 		}
 
-		chip->temp = mili_celsius;
+		/* MMI_STOPSHIP <debug abnormal QC sensor> : tsens report abnormal value. */
+		if (mili_celsius / 1000 > 145) {
+			pr_info("%s: %s last=%d, temp=%d, ret=%d\n", __func__,
+				chip->tz_dev->type, chip->temp, mili_celsius, ret);
+		} else {
+			chip->temp = mili_celsius;
+		}
 	}
 
 	*temp = chip->temp;
