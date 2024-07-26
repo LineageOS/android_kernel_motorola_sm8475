@@ -790,6 +790,7 @@ gpio_keys_get_devtree_pdata(struct device *dev, unsigned int *swap_code)
 
 static const struct of_device_id gpio_keys_of_match[] = {
 	{ .compatible = "gpio-keys-swap", },
+	{ .compatible = "gpio-keys", },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, gpio_keys_of_match);
