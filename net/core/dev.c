@@ -1047,6 +1047,7 @@ out:
 	up_read(&devnet_rename_sem);
 	return ret;
 }
+EXPORT_SYMBOL_GPL(netdev_get_name);
 
 /**
  *	dev_getbyhwaddr_rcu - find a device by its hardware address
@@ -3191,6 +3192,7 @@ static u16 skb_tx_hash(const struct net_device *dev,
 	}
 
 	if (skb_rx_queue_recorded(skb)) {
+		BUILD_BUG_ON_INVALID(qcount == 0);
 		hash = skb_get_rx_queue(skb);
 		if (hash >= qoffset)
 			hash -= qoffset;
