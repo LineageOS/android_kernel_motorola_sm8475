@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  */
 
@@ -106,6 +107,15 @@ enum mhi_bw_scale_req_status {
 			       ##__VA_ARGS__); \
 } while (0)
 
+#define MHI_IRQ_ERR(fmt, ...) do {	\
+	struct mhi_private *mhi_priv = \
+		dev_get_drvdata(&mhi_cntrl->mhi_dev->dev); \
+	dev_err(mhi_cntrl->cntrl_dev, "[E][%s] " fmt, __func__, ##__VA_ARGS__); \
+	if (mhi_priv && mhi_priv->log_lvl <= MHI_MSG_LVL_ERROR) \
+		ipc_log_string(mhi_priv->log_buf, "[E][%s] " fmt, __func__, \
+			       ##__VA_ARGS__); \
+} while (0)
+
 #define MHI_CRITICAL(fmt, ...) do { \
 	struct mhi_private *mhi_priv = \
 		dev_get_drvdata(&mhi_cntrl->mhi_dev->dev); \
@@ -165,7 +175,7 @@ struct file_info {
  * @valid - entry is valid or not
  */
 struct reg_write_info {
-	void __iomem *reg_addr;
+	u8 __iomem *reg_addr;
 	u32 val;
 	bool valid;
 };
@@ -182,7 +192,7 @@ struct mhi_private {
 	enum mhi_state saved_dev_state;
 	u32 m2_timeout_ms;
 	void *priv_data;
-	void __iomem *bw_scale_db;
+	u8 __iomem *bw_scale_db;
 	int (*bw_scale)(struct mhi_controller *mhi_cntrl,
 			struct mhi_link_info *link_info);
 	phys_addr_t base_addr;
@@ -225,12 +235,13 @@ struct mhi_timesync {
 	u64 (*time_get)(struct mhi_controller *mhi_cntrl);
 	int (*lpm_disable)(struct mhi_controller *mhi_cntrl);
 	int (*lpm_enable)(struct mhi_controller *mhi_cntrl);
-	void __iomem *time_reg;
-	void __iomem *time_db;
+	u8 __iomem *time_reg;
+	u8 __iomem *time_db;
 	u32 int_sequence;
 	u64 local_time;
 	u64 remote_time;
 	bool db_pending;
+	bool cap_en;
 	struct completion completion;
 	spinlock_t lock; /* list protection */
 	struct list_head head;

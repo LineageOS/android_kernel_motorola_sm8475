@@ -138,7 +138,7 @@ static int mhi_alloc_aligned_ring(struct mhi_controller *mhi_cntrl,
 		return -ENOMEM;
 
 	ring->iommu_base = (ring->dma_handle + (len - 1)) & ~(len - 1);
-	ring->base = ring->pre_aligned + (ring->iommu_base - ring->dma_handle);
+	ring->base = (u8 *)ring->pre_aligned + (ring->iommu_base - ring->dma_handle);
 
 	return 0;
 }
@@ -161,7 +161,6 @@ void mhi_deinit_free_irq(struct mhi_controller *mhi_cntrl)
 int mhi_init_irq_setup(struct mhi_controller *mhi_cntrl)
 {
 	struct mhi_event *mhi_event = mhi_cntrl->mhi_event;
-	struct device *dev = &mhi_cntrl->mhi_dev->dev;
 	int i, ret;
 
 	/* Setup BHI_INTVEC IRQ */
@@ -177,7 +176,7 @@ int mhi_init_irq_setup(struct mhi_controller *mhi_cntrl)
 			continue;
 
 		if (mhi_event->irq >= mhi_cntrl->nr_irqs) {
-			MHI_ERR("irq %d not available for event ring\n",
+			MHI_IRQ_ERR("irq %d not available for event ring\n",
 				mhi_event->irq);
 			ret = -EINVAL;
 			goto error_request;
@@ -188,7 +187,7 @@ int mhi_init_irq_setup(struct mhi_controller *mhi_cntrl)
 				  IRQF_SHARED | IRQF_NO_SUSPEND,
 				  "mhi", mhi_event);
 		if (ret) {
-			MHI_ERR("Error requesting irq:%d for ev:%d\n",
+			MHI_IRQ_ERR("Error requesting irq:%d for ev:%d\n",
 				mhi_cntrl->irq[mhi_event->irq], i);
 			goto error_request;
 		}
@@ -301,7 +300,7 @@ int mhi_init_dev_ctxt(struct mhi_controller *mhi_cntrl)
 		chan_ctxt->erindex = mhi_chan->er_index;
 
 		mhi_chan->ch_state = MHI_CH_STATE_DISABLED;
-		mhi_chan->tre_ring.db_addr = (void __iomem *)&chan_ctxt->wp;
+		mhi_chan->tre_ring.db_addr = (u8 __iomem *)&chan_ctxt->wp;
 	}
 
 	/* Setup event context */
@@ -427,7 +426,7 @@ int mhi_init_mmio(struct mhi_controller *mhi_cntrl)
 	int i, ret;
 	struct mhi_chan *mhi_chan;
 	struct mhi_event *mhi_event;
-	void __iomem *base = mhi_cntrl->regs;
+	u8 __iomem *base = mhi_cntrl->regs;
 	struct device *dev = &mhi_cntrl->mhi_dev->dev;
 	struct {
 		u32 offset;
@@ -1147,7 +1146,7 @@ int mhi_prepare_for_power_up(struct mhi_controller *mhi_cntrl)
 		 * This controller supports RDDM, so we need to manually clear
 		 * BHIE RX registers since POR values are undefined.
 		 */
-		memset_io(mhi_cntrl->bhie + BHIE_RXVECADDR_LOW_OFFS,
+		memset_io((void __iomem *)(mhi_cntrl->bhie + BHIE_RXVECADDR_LOW_OFFS),
 			  0, BHIE_RXVECSTATUS_OFFS - BHIE_RXVECADDR_LOW_OFFS +
 			  4);
 		/*
