@@ -87,6 +87,8 @@
 #define SN1xx_MAJOR_VER             0x10
 #define SN220_ROM_VER               0x01
 #define SN220_MAJOR_VER             0x01
+#define NXP557_ROM_VER               0x12
+#define NXP557_MAJOR_VER             0x00
 #define FW_ROM_CODE_VER_OFFSET      4
 #define FW_MAJOR_VER_OFFSET         7
 #define GET_VERSION_RSP_CHIP_TYPE_OFFSET	3
@@ -277,6 +279,7 @@ struct platform_configs {
 enum chip_types {
 	CHIP_SN1XX = 0x01,
 	CHIP_SN220 = 0x02,
+	CHIP_NXP557 = 0x03,
 	CHIP_UNKNOWN = 0xFF,
 };
 
@@ -326,6 +329,9 @@ struct nfc_dev {
 int nfc_dev_open(struct inode *inode, struct file *filp);
 int nfc_dev_close(struct inode *inode, struct file *filp);
 long nfc_dev_ioctl(struct file *pfile, unsigned int cmd, unsigned long arg);
+#ifdef CONFIG_COMPAT
+long nfc_compat_dev_ioctl(struct file *pfile, unsigned int cmd, unsigned long arg);
+#endif
 int nfc_parse_dt(struct device *dev, struct platform_configs *nfc_configs,
 			uint8_t interface);
 int nfc_misc_register(struct nfc_dev *nfc_dev,

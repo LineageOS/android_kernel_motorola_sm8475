@@ -78,6 +78,14 @@ unsigned int __read_mostly sched_init_task_load_windows;
  */
 unsigned int __read_mostly sched_load_granule;
 
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+struct msched_ops *moto_sched_ops = NULL;
+void set_moto_sched_ops(struct msched_ops *ops) {
+	moto_sched_ops = ops;
+}
+EXPORT_SYMBOL_GPL(set_moto_sched_ops);
+#endif
+
 /*
  *@boost:should be 0,1,2.
  *@period:boost time based on ms units.
@@ -2258,7 +2266,8 @@ static void init_new_task_load(struct task_struct *p)
 	wts->unfilter = sysctl_sched_task_unfilter_period;
 
 	INIT_LIST_HEAD(&wts->mvp_list);
-	wts->sum_exec_snapshot = 0;
+	wts->sum_exec_snapshot_for_slice = 0;
+	wts->sum_exec_snapshot_for_total = 0;
 	wts->total_exec = 0;
 	wts->mvp_prio = WALT_NOT_MVP;
 	__sched_fork_init(p);

@@ -91,8 +91,21 @@ struct find_best_target_env {
 	int	end_index;
 	bool	strict_max;
 	int	skip_cpu;
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+	int mvp_prio;
+#endif
 	u64	prs[8];
 };
+
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+// Moto huangzq2
+int moto_sched_enabled = 0;
+int set_moto_sched_enabled(int enable) {
+	moto_sched_enabled = enable;
+	return 0;
+}
+EXPORT_SYMBOL(set_moto_sched_enabled);
+#endif
 
 /*
  * cpu_util_without: compute cpu utilization without any contributions from *p
@@ -256,6 +269,10 @@ static void walt_find_best_target(struct sched_domain *sd,
 	unsigned int search_sibling_cluster = 0;
 	int cpu;
 	bool visited_clusters[MAX_CLUSTERS] = {[0 ... (MAX_CLUSTERS-1)] = false};
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+	int mvp_min_tasks = INT_MAX; // Moto chentao: spread mvp tasks.
+	int least_mvp_cpu = -1; // Moto huangzq2
+#endif
 
 	/* Find start CPU based on boost value */
 	start_cpu = fbt_env->start_cpu;
@@ -341,6 +358,24 @@ retry:
 
 			if (fbt_env->skip_cpu == i)
 				continue;
+
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+			// Moto huangzq2: skip long exec mvp tasks like top app or kswapd.
+			if (likely(moto_sched_enabled) && wrq->num_mvp_tasks > 0) {
+				struct walt_task_struct *rq_wts = list_first_entry(&wrq->mvp_tasks, struct walt_task_struct, mvp_list);
+				if (rq_wts != NULL && (rq_wts->mvp_prio == UX_PRIO_TOPAPP || rq_wts->mvp_prio == UX_PRIO_KSWAPD)) {
+					continue;
+				}
+			}
+
+			// Moto huangzq2: select least mvp cpu for all taks.
+			if (likely(moto_sched_enabled)
+					&& (wrq->num_mvp_tasks < mvp_min_tasks // least mvp tasks, select it.
+							|| (wrq->num_mvp_tasks == mvp_min_tasks && i == prev_cpu))) { // same mvp tasks but prev_cpu, also select it.
+				mvp_min_tasks = wrq->num_mvp_tasks;
+				least_mvp_cpu = i;
+			}
+#endif
 
 			if (wrq->num_mvp_tasks > 0)
 				continue;
@@ -487,6 +522,10 @@ retry:
 	if (unlikely(cpumask_empty(candidates))) {
 		if (most_spare_cap_cpu != -1)
 			cpumask_set_cpu(most_spare_cap_cpu, candidates);
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+		else if (least_mvp_cpu != -1)
+			cpumask_set_cpu(least_mvp_cpu, candidates);
+#endif
 		else if (cpu_active(prev_cpu)
 			 && (cpu_rq(prev_cpu)->nr_running < DIRE_STRAITS_PREV_NR_LIMIT))
 			cpumask_set_cpu(prev_cpu, candidates);
@@ -509,10 +548,17 @@ out:
 		goto retry;
 	}
 
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+	trace_sched_find_best_target(p, min_task_util, start_cpu, cpumask_bits(candidates)[0],
+			     most_spare_cap_cpu, order_index, end_index,
+			     fbt_env->skip_cpu, task_on_rq_queued(p), least_nr_cpu,
+			     least_mvp_cpu, fbt_env->mvp_prio);
+#else
 	trace_sched_find_best_target(p, min_task_util, start_cpu, cpumask_bits(candidates)[0],
 			     most_spare_cap_cpu, order_index, end_index,
 			     fbt_env->skip_cpu, task_on_rq_queued(p), least_nr_cpu,
 			     cpu_rq_runnable_cnt);
+#endif
 }
 
 static inline unsigned long
@@ -851,6 +897,13 @@ int walt_find_energy_efficient_cpu(struct task_struct *p, int prev_cpu,
 	if (!pd)
 		goto fail;
 
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+	// TODO: Mark it here becuase of potential overhead of walt_get_mvp_task_prio,
+	// pls unmark it once we have further optimization based on current mvp_prio,
+	// for example, select big core on top app.
+	// fbt_env.mvp_prio = walt_get_mvp_task_prio(p);
+	fbt_env.mvp_prio = WALT_NOT_MVP;
+#endif
 	fbt_env.is_rtg = is_rtg;
 	fbt_env.start_cpu = start_cpu;
 	fbt_env.order_index = order_index;
@@ -996,6 +1049,14 @@ static void walt_binder_low_latency_set(void *unused, struct task_struct *task,
 	if (unlikely(walt_disabled))
 		return;
 
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+	if (likely(moto_sched_enabled)) {
+		// Moto huangzq2: set ux type on binder
+		moto_binder_ux_type_set(task);
+		return; // qcom's low latency task will be coverd by moto_sched, so directly return here.
+	}
+#endif
+
 	if (task && current->signal &&
 			(current->signal->oom_score_adj == 0) &&
 			((current->prio < DEFAULT_PRIO) ||
@@ -1028,6 +1089,13 @@ static void binder_set_priority_hook(void *data,
 		bndrtrans->android_vendor_data1  = wts->boost;
 		wts->boost = TASK_BOOST_STRICT_MAX;
 	}
+
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+	// Moto huangzq2: inherit ux type
+	if (bndrtrans && bndrtrans->need_reply) {
+		moto_binder_inherit_ux_type(task);
+	}
+#endif
 }
 
 static void binder_restore_priority_hook(void *data,
@@ -1040,6 +1108,13 @@ static void binder_restore_priority_hook(void *data,
 
 	if (bndrtrans && wts->boost == TASK_BOOST_STRICT_MAX)
 		wts->boost = bndrtrans->android_vendor_data1;
+
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+	// Moto huangzq2: clear inherited ux type
+	if (bndrtrans) {
+		moto_binder_clear_inherited_ux_type(task);
+	}
+#endif
 }
 
 /*
@@ -1052,11 +1127,22 @@ static void binder_restore_priority_hook(void *data,
  */
 static inline int walt_get_mvp_task_prio(struct task_struct *p)
 {
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+	int mvp_prio = WALT_NOT_MVP;
+#endif
+
 	if (per_task_boost(p) == TASK_BOOST_STRICT_MAX)
 		return WALT_TASK_BOOST_MVP;
 
 	if (walt_binder_low_latency_task(p))
 		return WALT_BINDER_MVP;
+
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+	mvp_prio = moto_task_get_mvp_prio(p, true);
+
+	if (mvp_prio > WALT_NOT_MVP)  // Moto huangzq2
+		return mvp_prio;
+#endif
 
 	if (task_rtg_high_prio(p) || walt_procfs_low_latency_task(p) ||
 			walt_pipeline_low_latency_task(p))
@@ -1065,6 +1151,30 @@ static inline int walt_get_mvp_task_prio(struct task_struct *p)
 	return WALT_NOT_MVP;
 }
 
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+// Moto huangzq2
+static inline unsigned int __walt_cfs_mvp_task_limit(struct task_struct *p, int mvp_prio)
+ {
+	/* Moto huangzq2: use longer exec limit for moto mvp task */
+	unsigned int limit = WALT_MVP_LIMIT;
+
+	if (mvp_prio== WALT_BINDER_MVP)
+		return WALT_MVP_SLICE;
+
+	limit = moto_task_get_mvp_limit(p, mvp_prio);
+	if (limit > 0)
+		return limit;
+
+	return WALT_MVP_LIMIT;
+ }
+
+static inline unsigned int walt_cfs_mvp_task_limit(struct task_struct *p)
+{
+	struct walt_task_struct *wts = (struct walt_task_struct *) p->android_vendor_data1;
+
+	return __walt_cfs_mvp_task_limit(p, wts->mvp_prio);
+}
+#else
 static inline unsigned int walt_cfs_mvp_task_limit(struct task_struct *p)
 {
 	struct walt_task_struct *wts = (struct walt_task_struct *) p->android_vendor_data1;
@@ -1075,6 +1185,7 @@ static inline unsigned int walt_cfs_mvp_task_limit(struct task_struct *p)
 
 	return WALT_MVP_LIMIT;
 }
+#endif
 
 static void walt_cfs_insert_mvp_task(struct walt_rq *wrq, struct walt_task_struct *wts,
 				     bool at_front)
@@ -1098,11 +1209,18 @@ static void walt_cfs_insert_mvp_task(struct walt_rq *wrq, struct walt_task_struc
 	wrq->num_mvp_tasks++;
 }
 
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+static void walt_cfs_deactivate_mvp_task(struct rq *rq, struct task_struct *p, unsigned int reason)
+#else
 static void walt_cfs_deactivate_mvp_task(struct rq *rq, struct task_struct *p)
+#endif
 {
 	struct walt_rq *wrq = (struct walt_rq *) rq->android_vendor_data1;
 	struct walt_task_struct *wts = (struct walt_task_struct *) p->android_vendor_data1;
 
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+	trace_walt_cfs_deactivate_mvp_task(rq->curr, wts, reason); // MOto wangwang: debugging enhancement.
+#endif
 	list_del_init(&wts->mvp_list);
 	wts->mvp_prio = WALT_NOT_MVP;
 	wrq->num_mvp_tasks--;
@@ -1119,7 +1237,7 @@ static void walt_cfs_account_mvp_runtime(struct rq *rq, struct task_struct *curr
 {
 	struct walt_rq *wrq = (struct walt_rq *) rq->android_vendor_data1;
 	struct walt_task_struct *wts = (struct walt_task_struct *) curr->android_vendor_data1;
-	s64 delta;
+	u64 slice;
 	unsigned int limit;
 
 	lockdep_assert_held(&rq->lock);
@@ -1134,29 +1252,35 @@ static void walt_cfs_account_mvp_runtime(struct rq *rq, struct task_struct *curr
 	if (!(rq->clock_update_flags & RQCF_UPDATED))
 		update_rq_clock(rq);
 
-	/* sum_exec_snapshot can be ahead. See below increment */
-	delta = curr->se.sum_exec_runtime - wts->sum_exec_snapshot;
-	if (delta < 0)
-		delta = 0;
+	if (curr->se.sum_exec_runtime > wts->sum_exec_snapshot_for_total)
+		wts->total_exec = curr->se.sum_exec_runtime - wts->sum_exec_snapshot_for_total;
 	else
-		delta += rq_clock_task(rq) - curr->se.exec_start;
+		wts->total_exec = 0;
+
+	if (curr->se.sum_exec_runtime > wts->sum_exec_snapshot_for_slice)
+		slice = curr->se.sum_exec_runtime - wts->sum_exec_snapshot_for_slice;
+	else
+		slice = 0;
 
 	/* slice is not expired */
-	if (delta < WALT_MVP_SLICE)
+	if (slice < WALT_MVP_SLICE)
 		return;
 
+	wts->sum_exec_snapshot_for_slice = curr->se.sum_exec_runtime;
 	/*
 	 * slice is expired, check if we have to deactivate the
 	 * MVP task, otherwise requeue the task in the list so
 	 * that other MVP tasks gets a chance.
 	 */
-	wts->sum_exec_snapshot += delta;
-	wts->total_exec += delta;
 
 	limit = walt_cfs_mvp_task_limit(curr);
 	if (wts->total_exec > limit) {
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+		walt_cfs_deactivate_mvp_task(rq, curr, 2);
+#else
 		walt_cfs_deactivate_mvp_task(rq, curr);
 		trace_walt_cfs_deactivate_mvp_task(curr, wts, limit);
+#endif
 		return;
 	}
 
@@ -1173,8 +1297,17 @@ static void walt_cfs_mvp_do_sched_yield(void *unused, struct rq *rq)
 {
 	struct task_struct *curr = rq->curr;
 
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+	struct walt_task_struct *wts = (struct walt_task_struct *) curr->android_vendor_data1;
+
+    // Moto wangwang: don't deactivate mvp tasks when moto_sched enabled.
+	lockdep_assert_held(&rq->lock);
+	if (unlikely(!moto_sched_enabled) && !list_empty(&wts->mvp_list) && wts->mvp_list.next)
+		walt_cfs_deactivate_mvp_task(rq, curr, 3);
+#else
 	if (is_mvp_task(rq, curr))
 		walt_cfs_deactivate_mvp_task(rq, curr);
+#endif
 }
 
 void walt_cfs_enqueue_task(struct rq *rq, struct task_struct *p)
@@ -1191,8 +1324,13 @@ void walt_cfs_enqueue_task(struct rq *rq, struct task_struct *p)
 	 * it was once MVP but got demoted, it will not be MVP until
 	 * it goes to sleep again.
 	 */
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+	if (wts->total_exec > __walt_cfs_mvp_task_limit(p, mvp_prio)) // Moto huangzq2: use __walt_cfs_mvp_task_limit
+		return;
+#else
 	if (wts->total_exec > walt_cfs_mvp_task_limit(p))
 		return;
+#endif
 
 	wts->mvp_prio = mvp_prio;
 	walt_cfs_insert_mvp_task(wrq, wts, task_running(rq, p));
@@ -1202,17 +1340,28 @@ void walt_cfs_enqueue_task(struct rq *rq, struct task_struct *p)
 	 * task runtime snapshot. From now onwards we use this point as a
 	 * baseline to enforce the slice and demotion.
 	 */
-	if (!wts->total_exec) /* queue after sleep */
-		wts->sum_exec_snapshot = p->se.sum_exec_runtime;
+	if (!wts->total_exec) /* queue after sleep */ {
+		wts->sum_exec_snapshot_for_total = p->se.sum_exec_runtime;
+		wts->sum_exec_snapshot_for_slice = p->se.sum_exec_runtime;
+	}
 
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+	// Moto chentao8: enqueue task
+	moto_queue_ux_task(rq, p, 1);
+#endif
 }
 
 void walt_cfs_dequeue_task(struct rq *rq, struct task_struct *p)
 {
 	struct walt_task_struct *wts = (struct walt_task_struct *) p->android_vendor_data1;
 
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+	if (is_mvp_task(rq, p))
+		walt_cfs_deactivate_mvp_task(rq, p, 1);
+#else
 	if (is_mvp_task(rq, p))
 		walt_cfs_deactivate_mvp_task(rq, p);
+#endif
 
 	/*
 	 * Reset the exec time during sleep so that it starts
@@ -1222,6 +1371,11 @@ void walt_cfs_dequeue_task(struct rq *rq, struct task_struct *p)
 	 */
 	if (p->state != TASK_RUNNING)
 		wts->total_exec = 0;
+
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+	// Moto chentao8: dequeue task
+	moto_queue_ux_task(rq, p, 0);
+#endif
 }
 
 void walt_cfs_tick(struct rq *rq)
@@ -1286,8 +1440,14 @@ static void walt_cfs_check_preempt_wakeup(void *unused, struct rq *rq, struct ta
 	 * preemption.
 	 */
 	walt_cfs_account_mvp_runtime(rq, c);
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+	if (likely(moto_sched_enabled))
+		resched = (wrq->mvp_tasks.next != &wts_c->mvp_list) && (wrq->mvp_tasks.next == &wts_p->mvp_list); // Moto wangwang: fix preemption issue.
+	else
+		resched = (wrq->mvp_tasks.next != &wts_c->mvp_list);
+#else
 	resched = (wrq->mvp_tasks.next != &wts_c->mvp_list);
-
+#endif
 	/*
 	 * current is no longer eligible to run. It must have been
 	 * picked (because of MVP) ahead of other tasks in the CFS
@@ -1300,11 +1460,19 @@ static void walt_cfs_check_preempt_wakeup(void *unused, struct rq *rq, struct ta
 
 	/* current is the first in the queue, so no preemption */
 	*nopreempt = true;
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+	trace_walt_cfs_mvp_wakeup_nopreempt(c, wts_c, walt_cfs_mvp_task_limit(c), p, wts_p); // Moto wangwang: debugging enhancement.
+#else
 	trace_walt_cfs_mvp_wakeup_nopreempt(c, wts_c, walt_cfs_mvp_task_limit(c));
+#endif
 	return;
 preempt:
 	*preempt = true;
+#if IS_ENABLED(CONFIG_SCHED_MOTO_UNFAIR)
+	trace_walt_cfs_mvp_wakeup_preempt(p, wts_p, walt_cfs_mvp_task_limit(p), c, wts_c); // Moto wangwang: debugging enhancement.
+#else
 	trace_walt_cfs_mvp_wakeup_preempt(p, wts_p, walt_cfs_mvp_task_limit(p));
+#endif
 }
 
 static void walt_cfs_replace_next_task_fair(void *unused, struct rq *rq, struct task_struct **p,

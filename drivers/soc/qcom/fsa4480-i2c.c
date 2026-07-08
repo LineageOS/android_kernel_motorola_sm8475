@@ -11,6 +11,7 @@
 #include <linux/usb/ucsi_glink.h>
 #include <linux/soc/qcom/fsa4480-i2c.h>
 #include <linux/qti-regmap-debugfs.h>
+#include <linux/of.h>
 
 #define FSA4480_I2C_NAME	"fsa4480-driver"
 
@@ -27,6 +28,8 @@
 #define FSA4480_DELAY_L_SENSE   0x0F
 #define FSA4480_DELAY_L_AGND    0x10
 #define FSA4480_RESET           0x1E
+
+static u32 add_fsa4480_reset_probe_value = 0;
 
 struct fsa4480_priv {
 	struct regmap *regmap;
@@ -101,7 +104,7 @@ static int fsa4480_usbc_event_changed(struct notifier_block *nb,
 	if (!dev)
 		return -EINVAL;
 
-	dev_dbg(dev, "%s: USB change event received, supply mode %d, usbc mode %ld, expected %d\n",
+	dev_info(dev, "%s: USB change event received, supply mode %d, usbc mode %ld, expected %d\n",
 			__func__, acc, fsa_priv->usbc_mode.counter,
 			TYPEC_ACCESSORY_AUDIO);
 
@@ -140,7 +143,7 @@ static int fsa4480_usbc_analog_setup_switches(struct fsa4480_priv *fsa_priv)
 	/* get latest mode again within locked context */
 	mode = atomic_read(&(fsa_priv->usbc_mode));
 
-	dev_dbg(dev, "%s: setting GPIOs active = %d\n",
+	dev_info(dev, "%s: setting GPIOs active = %d\n",
 		__func__, mode != TYPEC_ACCESSORY_NONE);
 
 	switch (mode) {
@@ -326,13 +329,21 @@ static void fsa4480_update_reg_defaults(struct regmap *regmap)
 	for (i = 0; i < ARRAY_SIZE(fsa_reg_i2c_defaults); i++)
 		regmap_write(regmap, fsa_reg_i2c_defaults[i].reg,
 				   fsa_reg_i2c_defaults[i].val);
+
+        if (add_fsa4480_reset_probe_value) {
+            regmap_write(regmap, FSA4480_SWITCH_CONTROL, 0x18);
+        }
+
 }
 
 static int fsa4480_probe(struct i2c_client *i2c,
 			 const struct i2c_device_id *id)
 {
 	struct fsa4480_priv *fsa_priv;
+	struct device_node *np = i2c->dev.of_node;
 	int rc = 0;
+	int ret = 0;
+	u32 prev_control = 0, prev_enable = 0;
 
 	fsa_priv = devm_kzalloc(&i2c->dev, sizeof(*fsa_priv),
 				GFP_KERNEL);
@@ -341,7 +352,17 @@ static int fsa4480_probe(struct i2c_client *i2c,
 
 	fsa_priv->dev = &i2c->dev;
 
+	ret = of_property_read_u32(np, "add-fsa4480-reset-probe", &add_fsa4480_reset_probe_value);
+	if (ret) {
+		dev_err(fsa_priv->dev, "%s get add fsa4480-reset-probe failed,ret = %d\n", __func__, ret);
+	}
+
+
 	fsa_priv->regmap = devm_regmap_init_i2c(i2c, &fsa4480_regmap_config);
+
+	dev_info(fsa_priv->dev, "%s add_fsa4480_reset_probe_value = %d\n", __func__, add_fsa4480_reset_probe_value);
+
+
 	if (IS_ERR_OR_NULL(fsa_priv->regmap)) {
 		dev_err(fsa_priv->dev, "%s: Failed to initialize regmap: %d\n",
 			__func__, rc);
@@ -354,6 +375,13 @@ static int fsa4480_probe(struct i2c_client *i2c,
 	}
 
 	fsa4480_update_reg_defaults(fsa_priv->regmap);
+
+	if (add_fsa4480_reset_probe_value) {
+	    regmap_read(fsa_priv->regmap, FSA4480_SWITCH_CONTROL, &prev_control);
+	    regmap_read(fsa_priv->regmap, FSA4480_SWITCH_SETTINGS, &prev_enable);
+	    dev_info(fsa_priv->dev, "%s default Read control:%u enable:%u \n", __func__, prev_control, prev_enable);
+	}
+
 	devm_regmap_qti_debugfs_register(fsa_priv->dev, fsa_priv->regmap);
 
 	fsa_priv->ucsi_nb.notifier_call = fsa4480_usbc_event_changed;
@@ -398,6 +426,16 @@ static int fsa4480_remove(struct i2c_client *i2c)
 	return 0;
 }
 
+static void fsa4480_shutdown(struct i2c_client *i2c)
+{
+	if (add_fsa4480_reset_probe_value) {
+		struct fsa4480_priv *fsa_priv =
+			(struct fsa4480_priv *)i2c_get_clientdata(i2c);
+		regmap_write(fsa_priv->regmap, FSA4480_RESET, 0x01);
+		dev_info(fsa_priv->dev, "%s write FSA4480 RESET shutdown okay\n", __func__);
+	}
+}
+
 static const struct of_device_id fsa4480_i2c_dt_match[] = {
 	{
 		.compatible = "qcom,fsa4480-i2c",
@@ -413,6 +451,7 @@ static struct i2c_driver fsa4480_i2c_driver = {
 	},
 	.probe = fsa4480_probe,
 	.remove = fsa4480_remove,
+	.shutdown = fsa4480_shutdown,
 };
 
 static int __init fsa4480_init(void)
